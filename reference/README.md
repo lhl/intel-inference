@@ -10,6 +10,8 @@ Tracked reference files:
 
 - [`OpenVINO_Quick_Start_Guide.pdf`](OpenVINO_Quick_Start_Guide.pdf)
 - [`pytorch-2-10torchao.html`](pytorch-2-10torchao.html)
+- [`reddit-localllama-llamacpp-compute-memory-bandwidth-efficiency.md`](reddit-localllama-llamacpp-compute-memory-bandwidth-efficiency.md)
+- [`reddit-localllama-testing-llamacpp-intel-xe2-igpu-core-ultra.md`](reddit-localllama-testing-llamacpp-intel-xe2-igpu-core-ultra.md)
 
 Pinned upstream submodules in this directory:
 

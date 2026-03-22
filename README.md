@@ -30,6 +30,7 @@ Current docs:
 - [`ANALYSIS.md`](ANALYSIS.md): first-pass synthesis of current Intel/Linux support across frameworks and model families
 - [`RESEARCH-hardware.md`](RESEARCH-hardware.md): sourced hardware tables, derived throughput estimates, and bandwidth notes for current Intel client and Arc GPUs
 - [`IMPLEMENTATION.md`](IMPLEMENTATION.md): current Linux install guide, environment strategy, and backend limitations
+- [`TESTING.md`](TESTING.md): layered benchmark plan from raw hardware characterization up through full runtime and model testing
 - [`TODO.md`](TODO.md): research backlog and documentation checklist
 
 Repository layout:
