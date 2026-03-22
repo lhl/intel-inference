@@ -1,0 +1,7 @@
+# Ignore local upstream checkouts kept under reference/ for research and builds.
+reference/ipex-llm/
+reference/llama.cpp-openvino/
+reference/llama.cpp-sycl/
+reference/llama.cpp-vulkan/
+reference/openvino/
+reference/optimum-intel/
