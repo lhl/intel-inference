@@ -1,7 +1,3 @@
-# Ignore local upstream checkouts kept under reference/ for research and builds.
-reference/ipex-llm/
-reference/llama.cpp-openvino/
-reference/llama.cpp-sycl/
-reference/llama.cpp-vulkan/
-reference/openvino/
-reference/optimum-intel/
+# Ignore local llama.cpp working/build directories used for backend-specific experiments.
+llama.cpp-*/
+reference/llama.cpp-*/

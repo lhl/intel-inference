@@ -1,0 +1,12 @@
+[submodule "llama.cpp"]
+	path = llama.cpp
+	url = https://github.com/ggerganov/llama.cpp
+[submodule "reference/ipex-llm"]
+	path = reference/ipex-llm
+	url = https://github.com/intel/ipex-llm
+[submodule "reference/openvino"]
+	path = reference/openvino
+	url = https://github.com/openvinotoolkit/openvino
+[submodule "reference/optimum-intel"]
+	path = reference/optimum-intel
+	url = https://github.com/huggingface/optimum-intel

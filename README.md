@@ -23,7 +23,20 @@ Planned contents:
 
 Repository layout:
 
+- [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
 - [`TODO.md`](TODO.md): research backlog and documentation checklist
-- [`reference/`](reference/): upstream projects and source material to review
+- [`reference/`](reference/): tracked source material plus pinned upstream reference submodules
+
+If cloning this repository fresh, initialize the pinned upstream checkouts with:
+
+```bash
+git clone --recurse-submodules <repo-url>
+```
+
+or, in an existing clone:
+
+```bash
+git submodule update --init --recursive
+```
 
 Next step is to validate the support matrix and software stack for each framework before writing prescriptive setup instructions.
