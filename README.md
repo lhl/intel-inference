@@ -22,6 +22,7 @@ Based on the maintained docs and pinned reference repos in this checkout:
 - Best-supported maintained Intel inference paths today look like:
   - OpenVINO and Optimum Intel
   - `llama.cpp` via SYCL, Vulkan, or OpenVINO
+- For speech-specific work, the two most concrete maintained paths worth tracking are `openvino.genai` and `whisper.cpp`.
 - PyTorch XPU now has a real upstream path and is important, but still needs model-family and quantization validation on Intel hardware.
 - Upstream `vLLM` XPU and SGLang XPU both exist, but they currently look narrower and less mature on Intel than the CUDA- and HIP-first paths.
 - `vllm-openvino` is a distinct OpenVINO-backed serving path, not a synonym for generic Intel `vLLM` support.
@@ -47,8 +48,10 @@ For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENT
 
 - Strongest maintained direction:
   - OpenVINO, Optimum Intel, and Intel-backed OpenVINO/NPU flows
+  - `openvino.genai` for Whisper and SpeechT5-class speech pipelines
   - upstream PyTorch XPU
   - `llama.cpp` Intel-relevant backends
+  - `whisper.cpp`, especially where a lightweight local ASR path or OpenVINO-backed encoder acceleration is useful
 - Likely weaker or more constrained today:
   - upstream `vLLM` XPU
   - `vllm-openvino`

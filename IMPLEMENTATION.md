@@ -337,6 +337,22 @@ PY
 - OpenVINO explicitly positions itself across CPU, GPU, and NPU.
 - Optimum Intel is the Hugging Face-facing bridge.
 - Optimum Intel already documents Whisper quantization, so speech is not an afterthought here.
+- OpenVINO GenAI adds a maintained `WhisperPipeline` and SpeechT5 pipeline layer on top of OpenVINO Runtime.
+
+### Speech-specific maintained paths
+
+If your immediate goal is ASR or TTS rather than decoder-only LLMs:
+
+- start with `openvino.genai` if you want the clearest maintained Intel speech pipeline story for:
+  - Whisper
+  - SpeechT5
+  - CPU, GPU, and potentially NPU-backed OpenVINO execution
+- keep `whisper.cpp` as a second practical path for lightweight local Whisper testing, especially if you want:
+  - a small self-contained C/C++ stack
+  - local quantized Whisper models
+  - optional OpenVINO encoder acceleration on Intel CPU or GPU
+
+For this repo, that means ASR and TTS testing should not be framed only as "generic Hugging Face on Intel". We now have concrete speech-oriented reference implementations to compare.
 
 ### NPU-specific reality
 

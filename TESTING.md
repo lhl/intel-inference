@@ -115,9 +115,11 @@ We should intentionally test beyond one dense decoder model.
   - one LLaVA-class or Qwen2.5-VL or Qwen3 omni-capable model that multiple stacks can actually run
 - ASR:
   - Whisper first
+  - prioritize `openvino.genai`, Optimum Intel/OpenVINO, and `whisper.cpp` as the first real runtime paths
   - Fast Conformer only after we confirm a maintained path
 - TTS:
-  - one practical Hugging Face style baseline such as SpeechT5 if available on the stack
+  - one practical baseline such as SpeechT5
+  - prioritize `openvino.genai` and Optimum Intel if the model is supported there
 
 ### Size classes
 

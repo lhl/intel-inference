@@ -10,3 +10,9 @@
 [submodule "reference/optimum-intel"]
 	path = reference/optimum-intel
 	url = https://github.com/huggingface/optimum-intel
+[submodule "reference/whisper.cpp"]
+	path = reference/whisper.cpp
+	url = https://github.com/ggml-org/whisper.cpp
+[submodule "reference/openvino.genai"]
+	path = reference/openvino.genai
+	url = https://github.com/openvinotoolkit/openvino.genai

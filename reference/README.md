@@ -17,7 +17,9 @@ Pinned upstream submodules in this directory:
 
 - `ipex-llm`
 - `openvino`
+- `openvino.genai`
 - `optimum-intel`
+- `whisper.cpp`
 
 Ignored local working directories:
 
@@ -28,4 +30,6 @@ Ignored local working directories:
 Notes:
 
 - The main `llama.cpp` upstream checkout is tracked separately as a root-level submodule.
+- `whisper.cpp` is tracked here as the speech-side sibling to `llama.cpp`, and it includes its own OpenVINO-backed Intel path.
+- `openvino.genai` is tracked separately from the main OpenVINO repo because it gives us the maintained Whisper and SpeechT5 pipeline layer we care about for ASR and TTS.
 - The `llama.cpp-*` directories are intentionally ignored so we can keep backend-specific working trees and build artifacts without polluting repository history.
