@@ -25,9 +25,34 @@ We want to answer five different questions, not one:
 
 - Keep low-level and end-to-end testing separate.
 - Record enough system state to explain regressions later.
-- Use one or two stable comparison models across stacks before expanding model coverage.
+- Use one canonical source artifact per family, then derive stack-specific formats from it.
+- Treat model architecture, model size, and quantization as first-class benchmark axes.
+- Never compare a GGUF quant against a source-format checkpoint as if they were the same artifact.
 - Save machine-readable artifacts, not just prose summaries.
 - Label results as `smoke`, `bench`, or `validated`.
+
+## Stack tiers and sequencing
+
+We should not treat every stack as equally mature on Intel Linux.
+
+- Tier 1 baseline runtimes:
+  - OpenVINO and Optimum Intel
+  - `llama.cpp` Vulkan
+  - `llama.cpp` SYCL
+  - `llama.cpp` OpenVINO
+- Tier 1 support work:
+  - PyTorch XPU operator bring-up and small-model smoke tests
+- Tier 2 exploratory runtimes:
+  - PyTorch XPU end-to-end `transformers` comparisons
+  - upstream `vLLM` XPU
+  - `vllm-openvino`
+  - SGLang XPU
+
+Rules:
+
+- Tier 1 baselines must be working and measured before Tier 2 results are used for repo-level conclusions.
+- PyTorch XPU microbench work can start early because it helps explain kernel ceilings, but it should not replace Tier 1 runtime baselines.
+- `vLLM`, `vllm-openvino`, and SGLang should be treated as later-wave investigation targets, not the first source of Intel conclusions.
 
 ## Repository organization we should grow into
 
@@ -56,6 +81,121 @@ Suggested Intel equivalents:
   - result summarization
 - `backend-investigations/`
   - one-off deep dives when a backend behaves oddly
+
+## Canonical comparison artifacts
+
+Cross-stack comparisons need explicit artifact rules.
+
+### Dense text baselines
+
+- Canonical source baseline:
+  - `Qwen2.5-1.5B-Instruct`
+- Canonical size-up baseline:
+  - `Qwen2.5-7B-Instruct`
+- Canonical GGUF derivatives for `llama.cpp`-only comparison:
+  - `Q8_0`
+  - `Q4_K_M`
+
+Rules:
+
+- PyTorch, OpenVINO, Optimum Intel, `vLLM`, and SGLang should be compared using the same source-format checkpoint where possible.
+- `llama.cpp` can participate in source-format-adjacent comparisons only through explicitly documented conversion steps from that same source checkpoint.
+- GGUF results belong in a separate comparison table from source-format results.
+
+### Architecture coverage
+
+We should intentionally test beyond one dense decoder model.
+
+- Dense decoder LLM:
+  - baseline dense checkpoints above
+- Hybrid or recurrent:
+  - `Qwen3.5` family where supported
+  - `Nemotron 3` or another Mamba2-style target where support is real rather than nominal
+- Multimodal:
+  - one LLaVA-class or Qwen2.5-VL or Qwen3 omni-capable model that multiple stacks can actually run
+- ASR:
+  - Whisper first
+  - Fast Conformer only after we confirm a maintained path
+- TTS:
+  - one practical Hugging Face style baseline such as SpeechT5 if available on the stack
+
+### Size classes
+
+- Small:
+  - 1B to 3B class, for broad cross-stack bring-up
+- Medium:
+  - 7B to 8B class, for realistic local inference comparisons
+- Large:
+  - only after the smaller baselines are stable, and only where the hardware fits the test cleanly
+
+### Quantization coverage
+
+We should test quantization explicitly rather than treating it as an implementation detail.
+
+- Source-format baseline:
+  - BF16 when supported
+  - FP16 where BF16 is not available or not representative
+- Source-format quant baselines:
+  - one 8-bit path where the stack has a real maintained implementation
+  - one 4-bit path where the stack has a real maintained implementation
+- `llama.cpp` GGUF baselines:
+  - `Q8_0`
+  - `Q6_K`
+  - `Q4_K_M`
+
+Rules:
+
+- Quant comparisons must state the exact method, tooling, and calibration or conversion path.
+- Cross-stack quant comparisons should be labeled as approximate unless the quant recipe is genuinely equivalent.
+- Architecture coverage and quant coverage should expand independently. A backend that supports a model family in BF16 does not automatically count as supporting it in low-bit form.
+
+## Measurement protocol
+
+Results will be noisy unless we standardize the run procedure.
+
+### Environment and thermal state
+
+- Test on AC power only.
+- Record the active governor or power mode.
+- Let the system idle for 5 minutes before each benchmark block.
+- Disable unrelated heavy background jobs during a measured block.
+
+### Warmup and repetition
+
+- Do 1 cold setup run when compile or load time is part of the metric.
+- Do 3 warmup runs and discard them.
+- Do at least 5 measured repeats for each point.
+- Report mean, median, min, max, and standard deviation when practical.
+
+### Cache policy
+
+- Measure cold and warm behavior separately.
+- For cold runs, clear or bypass relevant caches where practical and document the method.
+- For warm runs, reuse the same compiled artifacts and report that the caches were hot.
+- OpenVINO FEIL and FIL should be recorded separately when the backend exposes them cleanly.
+
+### Prompt and token protocol
+
+- Use a fixed prompt set per model family.
+- For decoder LLMs, keep at least these standard lengths:
+  - prefill 128, 512, 2048
+  - generation 32, 128, 256
+- Record the exact chat template, tokenizer revision, and stop conditions.
+- TTFT and TPOT numbers are invalid if prompt formatting differs across stacks.
+
+### Affinity and execution settings
+
+- Record CPU affinity or cgroup constraints if used.
+- Record batch size, ubatch size, context length, and concurrency.
+- Record backend flags such as `-ngl`, `-fa`, attention backend selection, and OpenVINO cache or device settings.
+- Synchronize the device before stopping timers when the stack requires explicit sync.
+
+### Failure and invalidation rules
+
+- Mark a run invalid if it silently falls back to CPU.
+- Mark a run invalid if the requested quant or kernel path is not actually selected.
+- Mark a run invalid if thermal throttling starts mid-block and materially changes clocks.
+- Mark a run invalid if OOM, repeated kernel errors, or unstable latency outliers dominate the measured repeats.
 
 ## Layer 0: System baseline
 
@@ -251,6 +391,7 @@ Model types to start with:
 - one dense LLM
 - Whisper
 - one multimodal model
+- one TTS model once a maintained path is identified
 
 ### llama.cpp
 
@@ -327,6 +468,8 @@ Questions:
 - How much of the gap vs CUDA is kernel coverage?
 - How much is quantization availability?
 - What is the TTFT / TPOT profile?
+- Which model families are genuinely supported beyond dense decoder LLMs?
+- Which quants are Intel-supported in practice, not just listed in a general feature matrix?
 
 ### SGLang
 
@@ -335,17 +478,22 @@ Questions:
 - Is `intel_xpu` actually competitive for supported models?
 - Which page sizes work best?
 - How limited is the multimodal and quantized story on Intel?
+- Does SGLang XPU support enough of our target architectures to justify ongoing effort?
 
 ## Layer 4: End-to-end model coverage
 
 After the baseline is stable, expand to model families.
 
-### Initial shared baselines
+### Initial cross-stack baselines
 
-Use one or two models that can be compared across many stacks:
+- Shared source-format baseline:
+  - `Qwen2.5-1.5B-Instruct`
+- Shared size-up source-format baseline:
+  - `Qwen2.5-7B-Instruct`
+- Shared `llama.cpp`-only GGUF baseline:
+  - derived from the same dense source baseline, not from a different upstream artifact
 
-- `Llama-2-7B Q4_0` for historical `llama.cpp` comparability
-- `Llama-3.2-3B` or `Qwen2.5-1.5B` for modern dense baseline
+This gives us one canonical source model family and one canonical GGUF derivative path, instead of mixing unrelated artifacts.
 
 ### Follow-on model families
 
@@ -355,6 +503,21 @@ Use one or two models that can be compared across many stacks:
 - multimodal
 - ASR
 - TTS
+
+Recommended evaluation order:
+
+1. Dense baseline
+2. Dense size-up baseline
+3. Hybrid or recurrent model
+4. Multimodal
+5. Whisper
+6. TTS
+
+For each family, test at least:
+
+- source-format baseline precision
+- one higher-precision or native baseline
+- one lower-bit path if the backend actually supports it
 
 ## Metrics to record
 
@@ -416,20 +579,31 @@ The first real Intel pass should be:
 2. CPU and GPU memory bandwidth tests.
 3. A `mamf-finder`-style GEMM sweep for PyTorch XPU.
 4. A basic attention benchmark for PyTorch XPU.
-5. OpenVINO dense-LLM smoke plus one NPU compile test if hardware exists.
-6. `llama.cpp` backend comparison across:
+5. Tier 1 dense baseline smoke on OpenVINO and Optimum Intel.
+6. One OpenVINO NPU compile and cache test if hardware exists.
+7. `llama.cpp` backend comparison across:
    - Vulkan
    - SYCL
    - OpenVINO
-7. `llama-bench` context-depth sweeps.
-8. `llama-perplexity` on a small quant subset.
-9. One upstream `vLLM` XPU pass.
-10. One SGLang XPU pass.
+8. `llama-bench` context-depth sweeps.
+9. `llama-perplexity` on `Q8_0`, `Q6_K`, and `Q4_K_M`.
+10. One PyTorch XPU end-to-end dense-model smoke run with the same canonical source checkpoint.
+11. Only after the above is stable:
+    - one upstream `vLLM` XPU pass
+    - one `vllm-openvino` pass
+    - one SGLang XPU pass
+12. After dense baselines are stable, expand to:
+    - hybrid or recurrent architecture
+    - multimodal
+    - Whisper
+    - TTS
 
 ## Open questions
 
 - What is the best public low-level GPU bandwidth microbench for Intel on Linux?
 - Is there any credible low-level NPU throughput microbench, or do we need to build one?
 - Which model families can we keep truly apples-to-apples across PyTorch, OpenVINO, `llama.cpp`, `vLLM`, and SGLang?
+- Which hybrid and multimodal model families have enough maintained Intel support to deserve first-wave benchmarking?
+- Which quantization methods are actually equivalent enough across stacks to justify direct comparison?
 
 Until those are answered, this document should be treated as the testing blueprint, not the results.

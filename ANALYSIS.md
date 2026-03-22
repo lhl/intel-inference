@@ -1,6 +1,6 @@
 # Analysis
 
-This document is a first-pass, docs-backed analysis of the current Intel AI/ML inference stack on Linux, with a focus on modern Intel Arc GPUs and adjacent Intel hardware. It is derived from the local source set in this repository and should be read as a working analysis, not as a final support statement.
+This document is a first-pass, docs-backed analysis of the current Intel AI/ML inference stack on Linux, with a focus on modern Intel Arc GPUs and adjacent Intel hardware. It started from the pinned local source set in this repository and has since been cross-checked against current maintained upstream docs used by [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md). It should still be read as a working analysis, not as a final support statement.
 
 ## Scope
 
@@ -9,13 +9,15 @@ This document is a first-pass, docs-backed analysis of the current Intel AI/ML i
 - Workload focus: inference first
 - Framework/runtime focus: PyTorch/XPU, OpenVINO, Optimum Intel, llama.cpp, vLLM, and SGLang where evidence exists
 - Model-family focus: standard decoder LLMs, hybrid architectures, multimodal, ASR, and TTS
+- Benchmark focus: apples-to-apples comparisons across architecture, size class, and quantization where possible
 
 ## Corrections and updates
 
 - This is a docs-derived pass. No local runtime validation has been done yet.
-- The analysis uses the pinned local repos and tracked snapshots currently in this checkout, not a full live-web recency pass.
+- This analysis now combines the pinned local repos with a later maintained-doc verification pass. When this file and [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md) differ on setup details, prefer the maintained-source guidance in [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md).
 - `IPEX-LLM` is valuable as background and gap-mapping, but its own README says the project is archived and has known security issues, so it is not treated as a default recommendation.
-- `SGLang` has no hits in the current local source set. Any statement about SGLang support is therefore an evidence gap, not a conclusion.
+- At the time of the local-source pass, `SGLang` had no local repo footprint here. We now have maintained upstream XPU docs for it, but it should still be treated as an exploratory later-wave stack rather than a baseline path.
+- At the time of the local-source pass, `vLLM` looked mostly indirect from Intel-specific evidence. We now have maintained upstream Intel XPU docs, but the current story is still narrower and more constrained than CUDA-first paths.
 - `FastConformer` does not currently have a direct first-party signal in this local source set. The closest speech-related evidence is Whisper, SpeechT5, `Speech_Paraformer-Large`, and some Conformer-related conversion or export code.
 
 ## Evidence base
@@ -27,36 +29,49 @@ This document is a first-pass, docs-backed analysis of the current Intel AI/ML i
 | `reference/optimum-intel` | `abe58d751` | Primary maintained source for Hugging Face plus OpenVINO flows |
 | `reference/ipex-llm` | `de6bce2713` | Broad historical Intel coverage across model families and runtimes, but archived |
 | `reference/pytorch-2-10torchao.html` | local HTML snapshot, captured 2026-03-22 | Point-in-time signal for current PyTorch XPU messaging on Intel Linux |
+| PyTorch XPU docs | current upstream docs | Maintained install and support statement for Intel GPU on Linux |
+| Intel GPU driver docs | current upstream docs | Maintained Linux driver baseline for Arc and Intel GPU userspace |
+| OpenVINO install and NPU docs | current upstream docs | Maintained install and device guidance for Linux GPU and NPU |
+| vLLM GPU and quantization docs | current upstream docs | Maintained upstream statement of Intel XPU install constraints and quant coverage |
+| `vllm-openvino` | current upstream repo | Maintained limitations and device-specific guidance for OpenVINO-backed serving |
+| SGLang XPU and backend docs | current upstream docs | Maintained but still thin evidence for Intel XPU serving |
 
 ## Support rubric
 
 | Status | Meaning |
 |---|---|
-| Maintained and documented | Local source set shows active maintained docs for the path |
+| Maintained and documented | Current evidence set shows active maintained docs for the path |
 | Implemented, docs thin | Code or tests suggest support, but user-facing documentation is sparse |
 | Integration-specific | Support exists through a fork, backend, or vendor-specific path rather than a clean upstream path |
 | Archived | Support exists in an archived project and must be treated cautiously |
-| No local evidence | Current repo set does not provide enough evidence |
+| No local evidence | Current evidence set does not provide enough evidence |
 
 ## Stage 1: descriptive analysis
 
 ### 1. Ecosystem view
 
-| Area | Current state from local evidence | Status |
+| Area | Current state from current evidence | Status |
 |---|---|---|
 | OpenVINO | OpenVINO presents itself as a maintained Intel inference stack spanning CPU, GPU, and NPU, with explicit links to `torch.compile`, Optimum Intel, and `vllm-openvino`, plus examples for LLaVa and Whisper. | Maintained and documented |
 | Optimum Intel | Optimum Intel positions itself as the Hugging Face to OpenVINO bridge for export, inference, and quantization. The README includes `OVModelForCausalLM` and Whisper quantization examples. | Maintained and documented |
 | llama.cpp SYCL | llama.cpp has an Intel-first SYCL backend with explicit Linux support, verified Intel GPU families, oneAPI dependencies, and backend-specific tuning notes. | Maintained and documented |
 | llama.cpp Vulkan | llama.cpp offers a Linux Vulkan build path that is generic rather than Intel-specific, but the docs show Intel GPU detection in the runtime example. | Maintained and documented |
 | llama.cpp OpenVINO | llama.cpp also has an OpenVINO backend for Intel CPU, GPU, and NPU, but the backend docs still describe it as validated mainly on recent Intel AI PC platforms. | Maintained and documented |
-| PyTorch XPU | The local PyTorch snapshot frames PyTorch 2.10 plus TorchAO as a unified XPU path with SYCL extensibility and support for standard libraries on Ubuntu, but this evidence is currently a vendor-authored blog snapshot rather than a repo checkout. | Maintained signal, but evidence is thin here |
-| vLLM on Intel | Current local evidence points to integration-specific Intel support rather than a clearly first-class upstream path. IPEX-LLM documents a dedicated Intel-only branch, while OpenVINO links to `vllm-openvino`. | Integration-specific |
-| SGLang on Intel | No local docs or code signals in the current source set. | No local evidence |
+| PyTorch XPU | Official PyTorch docs provide Intel GPU install instructions, `torch.xpu` availability checks, binary wheels, and support statements for inference, training, eager mode, and `torch.compile`. | Maintained and documented |
+| vLLM on Intel | Upstream vLLM now documents an Intel XPU install path, but labels it as initial support with explicit Python and kernel-package constraints, and the quant and kernel story remains narrower than CUDA or HIP. | Maintained, but narrower than CUDA/HIP |
+| SGLang on Intel | SGLang has upstream XPU docs plus an `intel_xpu` attention backend path, but the current evidence is still thinner than for its CUDA-first paths. | Implemented, docs thin |
 | IPEX-LLM | Broadest coverage in the local repo set across runtimes and model types, but explicitly archived and security-flagged. | Archived |
 
 ### 2. Linux requirements snapshot
 
-The strongest Linux-specific requirements currently come from the `IPEX-LLM` Linux GPU docs and the `llama.cpp` SYCL/Vulkan docs.
+The strongest Linux-specific requirements now come from maintained sources:
+
+- Intel client GPU driver documentation
+- PyTorch XPU install documentation
+- OpenVINO install and NPU device documentation
+- `llama.cpp` SYCL, Vulkan, and OpenVINO backend docs
+
+`IPEX-LLM` remains useful as a historical reference for env vars, package combinations, and coverage breadth, but it should not anchor the default Linux setup story.
 
 Observed recurring requirements:
 
@@ -71,10 +86,12 @@ The maintained stack is not uniform:
 - `llama.cpp` Vulkan is the lightest-weight path in docs terms: install Vulkan packages, verify `vulkaninfo`, build with `-DGGML_VULKAN=1`.
 - `llama.cpp` SYCL and `IPEX-LLM` both pull in a heavier oneAPI-based path.
 - OpenVINO-based flows shift the stack toward OpenVINO runtime and device plugins rather than raw SYCL programming.
+- PyTorch XPU is now documented as a direct upstream path rather than an Intel-only sidecar stack.
+- `vLLM` XPU inherits meaningful constraints from the PyTorch XPU layer and adds its own Python 3.12 and `vllm-xpu-kernels` requirements.
 
 ### 3. Model-family view
 
-| Model family | Strongest current Intel path from local evidence | Notes |
+| Model family | Strongest current Intel path from current evidence | Notes |
 |---|---|---|
 | Standard decoder LLMs | OpenVINO, Optimum Intel, PyTorch XPU, llama.cpp SYCL/OpenVINO, and IPEX-LLM all show meaningful evidence | This is the best-covered category by far |
 | Hybrid SSM or recurrent-attention architectures | Mixed but promising: `llama.cpp` has Mamba-family model handling, and `optimum-intel` contains explicit Mamba2 and GatedDeltaNet code paths | User-facing docs are weaker than the implementation signals |
@@ -93,25 +110,29 @@ Specific architectures called out for later validation:
 
 | Stack | Kernel or backend signal | Interpretation |
 |---|---|---|
-| PyTorch XPU | The PyTorch snapshot claims fast paths for Linear and SDPA, TorchAO quantization, and SYCL extensibility | Intel is pushing upstream XPU parity, but exact model-family coverage still needs direct verification |
+| PyTorch XPU | Official docs plus the PyTorch snapshot claim support for inference, training, `torch.compile`, and common precision modes on Intel GPU | Intel is pushing upstream XPU parity, but exact model-family and quant coverage still need direct verification |
 | OpenVINO | OpenVINO emphasizes graph compilation, kernel fusion, device plugins, `torch.compile`, and GenAI pipelines | This looks like the main maintained Intel optimization layer, especially outside pure PyTorch eager execution |
 | llama.cpp SYCL | Intel-first backend with oneDNN, oneMKL, Level Zero, and Flash Attention notes | This is likely the strongest Intel-specific local inference path when GGUF is acceptable |
 | llama.cpp Vulkan | Generic GPU path with relatively simple Linux build requirements | Attractive as a fallback path, but the docs are not Intel-specialized |
-| vLLM | Local evidence suggests Intel support is backend-specific or fork-specific rather than co-equal with CUDA or HIP paths | Likely a major gap area versus NVIDIA and AMD |
-| SGLang | No current evidence | Must be researched separately |
+| vLLM | Upstream docs show explicit Intel XPU support, but it is still constrained and custom-kernel-dependent | Likely still a major gap area versus NVIDIA and AMD |
+| SGLang | Upstream docs show `intel_xpu` support, but Intel coverage appears much thinner than CUDA-centric paths | Must be treated as exploratory until validated |
 
 ### 5. Source-backed observations by project
 
 #### PyTorch XPU
 
 - The local PyTorch 2.10 snapshot frames the current story around XPU, TorchAO, and SYCL rather than a separate Intel-only extension.
-- It claims broad operator and dtype support, integration with standard libraries like Hugging Face Transformers and Diffusers, and acceleration of Linear and SDPA.
-- The Linux signal in this snapshot is Ubuntu 24.04.3 plus Intel GPU userspace packages, but the current local evidence is still marketing-style rather than a full source checkout.
+- Official PyTorch docs now make the baseline clearer:
+  - install the Intel GPU driver first
+  - install `torch`, `torchvision`, and `torchaudio` from the XPU wheel index
+  - verify with `torch.xpu.is_available()`
+  - both inference and training are documented, along with eager mode and `torch.compile`
+- This is enough to treat PyTorch XPU as a maintained upstream path, though not enough to assume architecture-level parity without testing.
 
 #### OpenVINO and Optimum Intel
 
 - OpenVINO explicitly positions itself as an inference toolkit for Intel CPU, GPU, and NPU, and explicitly points users to Optimum Intel, `torch.compile`, and `vllm-openvino`.
-- OpenVINO also explicitly highlights LLaVa and Whisper tutorial material.
+- OpenVINO also explicitly highlights LLaVa and Whisper tutorial material and maintains NPU-specific device and GenAI documentation.
 - Optimum Intel clearly documents causal LM export and inference, and also documents Whisper quantization.
 - Beyond the README, Optimum Intel contains implementation-level signals for newer hybrid architectures:
   - `modeling_decoder.py` contains explicit `Mamba2` state handling.
@@ -138,7 +159,21 @@ Specific architectures called out for later validation:
   - Intel-only Linux vLLM integration via a dedicated `analytics-zoo/vllm` branch
   - verified model tables spanning Qwen2.5, Qwen2-Audio, Whisper, Distil-Whisper, Mamba, Bark, SpeechT5, Phi-3-Vision, MiniCPM multimodal variants, and NPU speech workloads like `Speech_Paraformer-Large`
 - This makes it extremely useful as a map of what Intel had working or working enough to document.
-- The problem is governance, not breadth: because the repo is archived and security-flagged, it is evidence of prior work, not a clean default path.
+- The problem is governance, not breadth: because the repo is archived and security-flagged, it is evidence of prior work, not a clean default path or baseline setup guide.
+
+#### vLLM and SGLang
+
+- Upstream `vLLM` now has an explicit Intel XPU installation section for Linux.
+- The upstream docs still frame Intel support as early:
+  - initial support wording
+  - Intel ARC and Data Center GPU called out
+  - Python 3.12 requirement for the provided `vllm-xpu-kernels` wheel
+- The upstream quantization matrix shows Intel GPU support for AWQ and GPTQ, but not Marlin, FP8, or `bitsandbytes`; it also shows `GGUF` support in the generic matrix, which should be treated carefully until the Intel XPU runtime path is directly validated.
+- `vllm-openvino` is a distinct path, not just "vLLM on Intel" generically. Its own README says:
+  - only LLM models are currently supported
+  - LLaVA and encoder-decoder models are not enabled
+  - LoRA serving, tensor parallelism, and pipeline parallelism are not enabled
+- Upstream SGLang now documents an XPU platform page and an `intel_xpu` attention backend, but the Intel path still looks materially thinner than the CUDA-centric surface area in the rest of its docs.
 
 ## Stage 2: evaluative analysis
 
@@ -155,16 +190,21 @@ Specific architectures called out for later validation:
 ### 2. Where the evidence is weaker than it first appears
 
 - PyTorch XPU:
-  - The current local signal is promising, but it is still mostly a vendor-authored blog snapshot rather than a repository-level docs pass through PyTorch source and tests.
+  - The maintained-source signal is now stronger than when this file started.
+  - The remaining gap is not "is there an upstream path" but "how much real model-family and quant coverage exists on Intel XPU in practice".
   - We should not assume model-family parity from generic claims about operators and libraries.
 
 - vLLM:
-  - The local evidence does not yet support a claim that Intel support is first-class in upstream vLLM.
-  - What we do have points to a dedicated Intel branch in archived `IPEX-LLM` docs and a separate `vllm-openvino` integration referenced by OpenVINO.
-  - This is materially different from the CUDA-first perception of upstream vLLM.
+  - Upstream Intel XPU support is now explicit, so the question is no longer whether it exists.
+  - The real issue is maturity:
+    - narrower hardware story
+    - extra kernel-package constraints
+    - narrower quant and kernel coverage than CUDA
+  - `vllm-openvino` is useful, but it is a separate OpenVINO integration with notable feature limits.
 
 - SGLang:
-  - No local evidence currently. Any serious statement would be guesswork.
+  - Upstream Intel XPU docs exist now.
+  - The remaining concern is still maturity and breadth, not total absence.
 
 - Hybrid architectures:
   - The strongest signals are implementation-level:
@@ -199,8 +239,8 @@ OpenVINO and Optimum Intel likely support more than their READMEs explicitly adv
 |---|---|---:|---:|---|
 | OpenVINO is the main maintained Intel inference path across GPU and NPU in this repo set | `[T]` | E3 | 0.77 | Multiple maintained sources and integrations point in the same direction |
 | llama.cpp is currently one of the most practical Intel Linux inference paths | `[T]` | E3 | 0.75 | Detailed backend docs and explicit Intel device coverage |
-| vLLM Intel support is not yet shown as first-class upstream in the current local evidence | `[H]` | E4 | 0.72 | Current evidence is fork-specific or backend-specific |
-| SGLang Intel support is currently unestablished in this repo set | `[F]` | E4 | 0.85 | No local hits at all, but absence of evidence is not global evidence of absence |
+| vLLM Intel support now has an upstream-documented path, but it still looks narrower than CUDA or HIP in practice | `[H]` | E3 | 0.77 | Upstream docs exist, but the constraints and feature gaps are explicit |
+| SGLang Intel support exists upstream, but still looks exploratory and thinly evidenced | `[H]` | E3 | 0.71 | Upstream docs exist, but Intel coverage is much thinner than CUDA-oriented paths |
 | Intel support breadth is much stronger for standard LLMs than for hybrid, multimodal, ASR, or TTS workloads | `[T]` | E3 | 0.74 | Broad but uneven signals across sources |
 | IPEX-LLM is useful for background but unsafe as a default recommendation | `[F]` | E2 | 0.9 | The repo itself says it is archived and has known security issues |
 
@@ -221,8 +261,8 @@ On this reading, Intel is not missing an inference stack. It is missing a single
 
 The best-known CUDA and HIP ecosystems still look stronger in first-class serving support and custom-kernel maturity:
 
-- vLLM evidence for Intel is currently indirect
-- SGLang is not evidenced at all in this source set
+- vLLM support for Intel exists, but still looks constrained relative to CUDA and HIP
+- SGLang Intel support exists, but it still is not evidenced as deeply as the maintained Tier 1 paths
 - some of the most impressive Intel breadth sits in an archived project
 - hybrid architecture support is visible in code before it is visible in polished end-user docs
 
@@ -236,28 +276,32 @@ The most defensible current synthesis is:
 2. The strongest maintained documentation path is OpenVINO plus Optimum Intel, with llama.cpp as a practical local inference path and escape hatch.
 3. PyTorch XPU matters and looks promising, but it needs direct model-family verification.
 4. Breadth beyond standard text LLMs exists, but a lot of that breadth is either archived, implementation-level, or insufficiently documented.
-5. vLLM and probably SGLang are where Intel is most likely to look behind CUDA and HIP ecosystems.
+5. vLLM and SGLang are still where Intel is most likely to look behind CUDA and HIP ecosystems.
 
 ## Priority research passes after this document
 
 1. Add first-party reference repos for upstream `vllm`, `vllm-openvino`, and `sglang`.
-2. Do a direct maintained-source pass for PyTorch XPU rather than relying on the blog snapshot alone.
-3. Trace exact model-family coverage in `optimum-intel` and OpenVINO tests for:
+2. Trace exact model-family coverage in `optimum-intel` and OpenVINO tests for:
    - hybrid models
    - multimodal models
    - ASR
    - TTS
-4. Map Intel Linux requirements into one matrix:
+3. Map Intel Linux requirements into one matrix:
    - Arc dGPU
    - Xe-family iGPU
    - NPU
    - backend-specific packages and env vars
-5. Validate one representative example each for:
+4. Validate one representative example each for:
    - standard LLM
    - hybrid LLM
    - multimodal model
    - ASR
    - TTS
+5. Map quantization support by stack and by architecture family instead of treating "quant support" as one column.
+6. Define canonical benchmark artifacts:
+   - one source-format dense baseline
+   - one source-format size-up baseline
+   - one GGUF derivative path for `llama.cpp`
 
 ## Source references
 
@@ -279,3 +323,14 @@ The most defensible current synthesis is:
 - `llama.cpp/convert_hf_to_gguf_update.py` at `3306dbaef`
 - `llama.cpp/benches/nemotron/nemotron-dgx-spark.md` at `3306dbaef`
 - `reference/pytorch-2-10torchao.html` local snapshot captured on 2026-03-22
+- PyTorch XPU docs: `https://docs.pytorch.org/docs/stable/notes/get_start_xpu.html`
+- Intel client GPU driver docs: `https://dgpu-docs.intel.com/driver/client/overview.html`
+- OpenVINO install docs: `https://docs.openvino.ai/2026/get-started/install-openvino.html`
+- OpenVINO NPU device docs: `https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html`
+- OpenVINO GenAI on NPU: `https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html`
+- vLLM GPU install docs: `https://docs.vllm.ai/en/latest/getting_started/installation/gpu/`
+- vLLM quantization docs: `https://docs.vllm.ai/en/latest/features/quantization/`
+- `vllm-openvino`: `https://github.com/vllm-project/vllm-openvino`
+- SGLang XPU docs: `https://docs.sglang.io/platforms/xpu.html`
+- SGLang attention backend docs: `https://docs.sglang.io/advanced_features/attention_backend.html`
+- SGLang quantization docs: `https://docs.sglang.io/advanced_features/quantization.html`

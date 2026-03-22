@@ -13,7 +13,59 @@ Initial scope:
 - Model coverage should include standard LLMs, newer hybrid architectures, multimodal models, ASR, and TTS where Intel support meaningfully differs
 - Reproducible setup notes, validation steps, and known limitations
 
-This is an early scaffold. The goal right now is to organize the work, collect references, and turn research into tested guidance. We should treat anything not explicitly validated in this repo as unconfirmed.
+This is still an early docs-first repo. The goal right now is to turn scattered Intel ecosystem information into tested, Linux-focused guidance. Anything not explicitly validated here should still be treated as provisional.
+
+## Current read
+
+Based on the maintained docs and pinned reference repos in this checkout:
+
+- Best-supported maintained Intel inference paths today look like:
+  - OpenVINO and Optimum Intel
+  - `llama.cpp` via SYCL, Vulkan, or OpenVINO
+- PyTorch XPU now has a real upstream path and is important, but still needs model-family and quantization validation on Intel hardware.
+- Upstream `vLLM` XPU and SGLang XPU both exist, but they currently look narrower and less mature on Intel than the CUDA- and HIP-first paths.
+- `vllm-openvino` is a distinct OpenVINO-backed serving path, not a synonym for generic Intel `vLLM` support.
+- `IPEX-LLM` is useful as historical reference material and gap-mapping, but it is archived and should not be treated as the default path.
+
+## Basic Linux setup
+
+The current recommended starting point is:
+
+1. Install the Intel Linux GPU driver stack first.
+2. Install the Intel NPU driver only if your machine has an NPU and you intend to test it.
+3. Use separate `mamba` or `conda` environments per stack instead of one shared environment.
+4. Start with one of these paths:
+   - OpenVINO and Optimum Intel for the most maintained Intel-focused path
+   - `llama.cpp` Vulkan for the lightest initial GPU bring-up
+   - `llama.cpp` SYCL if you want the Intel-specific GPU backend
+   - PyTorch XPU if you want the upstream framework path
+5. Treat `vLLM`, `vllm-openvino`, and SGLang as later-wave stacks after the baseline paths work.
+
+For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md).
+
+## What currently looks alive, weak, or dead
+
+- Strongest maintained direction:
+  - OpenVINO, Optimum Intel, and Intel-backed OpenVINO/NPU flows
+  - upstream PyTorch XPU
+  - `llama.cpp` Intel-relevant backends
+- Likely weaker or more constrained today:
+  - upstream `vLLM` XPU
+  - `vllm-openvino`
+  - SGLang XPU
+- Dead or deprecated as a default path:
+  - `IPEX-LLM`, because it is archived and security-flagged
+
+## Where current effort seems to be going
+
+The current development story appears to center on:
+
+- upstream PyTorch XPU rather than a separate Intel-only PyTorch fork
+- OpenVINO and Optimum Intel for optimized Intel inference, especially across GPU and NPU
+- `llama.cpp` backend work for practical local inference on Intel hardware
+- selective Intel support in serving stacks rather than clear first-class parity with CUDA-first ecosystems
+
+That is enough to start writing useful setup and support guidance now, even before the performance testing phase is complete.
 
 Planned contents:
 
@@ -50,4 +102,10 @@ or, in an existing clone:
 git submodule update --init --recursive
 ```
 
-Next step is to turn the docs-derived guidance into a real testing plan and validated results.
+Current recommendation order for new testing work:
+
+1. Get OpenVINO or `llama.cpp` running first.
+2. Bring up PyTorch XPU and basic operator checks.
+3. Only then spend time on `vLLM`, `vllm-openvino`, and SGLang.
+
+The next major step is to turn the docs-derived guidance into validated setup notes, model coverage findings, and real benchmark results.
