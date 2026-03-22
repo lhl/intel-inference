@@ -25,10 +25,15 @@ Planned contents:
 - Minimal smoke tests to confirm the stack is working
 - Troubleshooting notes for common failure modes
 
+Current docs:
+
+- [`ANALYSIS.md`](ANALYSIS.md): first-pass synthesis of current Intel/Linux support across frameworks and model families
+- [`IMPLEMENTATION.md`](IMPLEMENTATION.md): current Linux install guide, environment strategy, and backend limitations
+- [`TODO.md`](TODO.md): research backlog and documentation checklist
+
 Repository layout:
 
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
-- [`TODO.md`](TODO.md): research backlog and documentation checklist
 - [`reference/`](reference/): tracked source material plus pinned upstream reference submodules
 
 If cloning this repository fresh, initialize the pinned upstream checkouts with:
@@ -43,4 +48,4 @@ or, in an existing clone:
 git submodule update --init --recursive
 ```
 
-Next step is to validate the support matrix and software stack for each framework before writing prescriptive setup instructions.
+Next step is to turn the docs-derived guidance into a real testing plan and validated results.
