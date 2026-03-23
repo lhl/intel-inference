@@ -26,8 +26,21 @@ source ./00-setup/npu-env.sh
 
 ## oneAPI
 
-- `verify-oneapi.sh` currently fails because `/opt/intel/oneapi/setvars.sh` is missing
-- preferred Arch install path is:
+- `verify-oneapi.sh` now passes
+- installed Arch packages:
+
+```bash
+intel-oneapi-dpcpp-cpp 2025.0.4-1
+intel-oneapi-mkl-sycl 2025.0.1-3
+```
+
+- source the repo helper before SYCL-native builds:
+
+```bash
+source ./00-setup/oneapi-env.sh
+```
+
+- preferred Arch install path remains:
 
 ```bash
 ./00-setup/install-oneapi-arch.sh
@@ -50,3 +63,4 @@ sudo pacman -S --needed -- intel-oneapi-dpcpp-cpp intel-oneapi-mkl-sycl
 
 - The minimal OpenVINO env should stay minimal by default. `optimum-intel[openvino]` pulls a large generic `torch` stack and should be opt-in.
 - The current NPU failure mode is userspace loader-path related, not a missing kernel driver.
+- oneAPI tools are installed system-wide but are not on the default shell `PATH` until `oneapi-env.sh` or `setvars.sh` is sourced.

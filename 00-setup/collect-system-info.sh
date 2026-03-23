@@ -110,6 +110,24 @@ tool_presence_report() {
     done
 }
 
+oneapi_tool_presence_report() {
+    local oneapi_script="$SCRIPT_DIR/oneapi-env.sh"
+    if [[ ! -f "$oneapi_script" ]]; then
+        printf 'oneapi-env.sh=missing\n'
+        return 0
+    fi
+    bash -lc "
+        source \"$oneapi_script\" >/dev/null 2>&1 || exit 0
+        for tool in xpu-smi sycl-ls clinfo vulkaninfo cmake gcc clang icx icpx python3; do
+            if command -v \"\$tool\" >/dev/null 2>&1; then
+                printf '%s=present\n' \"\$tool\"
+            else
+                printf '%s=not-found\n' \"\$tool\"
+            fi
+        done
+    " 2>/dev/null || true
+}
+
 {
     printf '# Intel inference setup inventory\n'
     printf 'generated_utc=%s\n' "$TIMESTAMP_UTC"
@@ -130,8 +148,12 @@ run_cmd "dri-nodes" ls -l /dev/dri
 run_shell "kernel-modules" "lsmod | grep -E '^(xe|i915|drm|ivpu|intel_vpu)\\b' || true"
 
 {
-    printf '\n## tool-presence\n'
+    printf '\n## tool-presence-default-shell\n'
     tool_presence_report
+} >>"$OUTFILE" 2>&1
+{
+    printf '\n## tool-presence-oneapi-env\n'
+    oneapi_tool_presence_report
 } >>"$OUTFILE" 2>&1
 run_cmd "xpu-smi-version" xpu-smi -v
 run_cmd "xpu-smi-discovery" xpu-smi discovery
@@ -139,7 +161,9 @@ run_shell "clinfo-summary" "clinfo | sed -n '1,160p'"
 run_shell "vulkaninfo-summary" "vulkaninfo --summary | sed -n '1,200p'"
 run_cmd "python3-version" python3 --version
 run_shell "compiler-versions" "gcc --version | sed -n '1,3p'; clang --version | sed -n '1,3p'; icx --version | sed -n '1,3p'; icpx --version | sed -n '1,3p'"
+run_shell "compiler-versions-oneapi-env" "source \"$SCRIPT_DIR/oneapi-env.sh\" >/dev/null 2>&1 && gcc --version | sed -n '1,3p'; clang --version | sed -n '1,3p'; icx --version | sed -n '1,3p'; icpx --version | sed -n '1,3p'; sycl-ls | sed -n '1,20p'"
 run_shell "intel-env-var-names" "env | grep -E '^(ONEAPI|SYCL|ZE_|OCL_|VULKAN_|LIBVA_)' | cut -d= -f1 | sort || true"
+run_shell "intel-env-var-names-oneapi-env" "source \"$SCRIPT_DIR/oneapi-env.sh\" >/dev/null 2>&1 && env | grep -E '^(ONEAPI|SYCL|ZE_|OCL_|VULKAN_|LIBVA_)' | cut -d= -f1 | sort || true"
 
 if [[ "$WRITE_TRACKED_SUMMARY" -eq 1 ]]; then
     OS_PRETTY_NAME="$(awk -F= '/^PRETTY_NAME=/{gsub(/"/, "", $2); print $2; exit}' /etc/os-release 2>/dev/null || true)"
@@ -152,10 +176,12 @@ if [[ "$WRITE_TRACKED_SUMMARY" -eq 1 ]]; then
     NPU_FILTER="$(capture_shell "lspci -nnk | grep -A4 -E 'Processing accelerators|NPU' | sed -n '1,20p'")"
     DRI_NODES="$(capture_shell "ls -l /dev/dri")"
     TOOL_PATHS="$(tool_presence_report)"
+    ONEAPI_TOOL_PATHS="$(oneapi_tool_presence_report)"
     XPU_DISCOVERY="$(capture_shell "xpu-smi discovery | sed -n '1,120p'")"
     CLINFO_SUMMARY="$(capture_shell "clinfo | awk '/Platform Name/ && !seen_p++ {print} /Platform Vendor/ && !seen_pv++ {print} /Platform Version/ && !seen_pver++ {print} /Device Name/ && !seen_d++ {print} /Device Vendor/ && !seen_dv++ {print} /Device Version/ && !seen_dver++ {print} /Driver Version/ && !seen_drv++ {print}'")"
     VULKAN_SUMMARY="$(capture_shell "vulkaninfo --summary | awk '/^GPU[0-9]+:/ {print} /deviceType/ {print} /deviceName/ {print} /driverName/ {print} /driverInfo/ {print} /vendorID/ {print} /deviceID/ {print}' | sed -n '1,40p'")"
     INTEL_ENV_NAMES="$(capture_shell "env | grep -E '^(ONEAPI|SYCL|ZE_|OCL_|VULKAN_|LIBVA_)' | cut -d= -f1 | sort || true")"
+    ONEAPI_ENV_NAMES="$(capture_shell "source \"$SCRIPT_DIR/oneapi-env.sh\" >/dev/null 2>&1 && env | grep -E '^(ONEAPI|SYCL|ZE_|OCL_|VULKAN_|LIBVA_)' | cut -d= -f1 | sort || true")"
 
     cat >"$SUMMARY_FILE" <<EOF
 # System Profile: $SYSTEM_ID
@@ -193,10 +219,16 @@ ${NPU_FILTER:-not-detected}
 ${DRI_NODES:-unavailable}
 ~~~
 
-## Tool availability
+## Tool availability (default shell)
 
 ~~~text
 ${TOOL_PATHS:-unavailable}
+~~~
+
+## Tool availability after sourcing oneapi-env.sh
+
+~~~text
+${ONEAPI_TOOL_PATHS:-unavailable}
 ~~~
 
 ## xpu-smi discovery
@@ -217,10 +249,16 @@ ${CLINFO_SUMMARY:-unavailable}
 ${VULKAN_SUMMARY:-unavailable}
 ~~~
 
-## Intel env var names
+## Intel env var names (default shell)
 
 ~~~text
 ${INTEL_ENV_NAMES:-none}
+~~~
+
+## Intel env var names after sourcing oneapi-env.sh
+
+~~~text
+${ONEAPI_ENV_NAMES:-none}
 ~~~
 
 ## Raw capture

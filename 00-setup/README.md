@@ -60,4 +60,4 @@ On the current Lunar Lake Linux machine:
 - GPU bring-up is passing with `xe`, OpenCL, Vulkan, PyTorch XPU, and OpenVINO GPU
 - fresh repo-owned envs exist for `intel-inf-openvino`, `intel-inf-openvino-genai`, `intel-inf-optimum-openvino`, and `intel-inf-torch-xpu`
 - OpenVINO NPU works only after exposing `/usr/lib/x86_64-linux-gnu` through `LD_LIBRARY_PATH`
-- oneAPI compiler tooling is not installed yet, so SYCL-native builds are still blocked
+- oneAPI compiler tooling is installed and verified; source `./00-setup/oneapi-env.sh` before SYCL-native builds

@@ -2,7 +2,7 @@
 
 This is a sanitized system profile intended to be safe to check into git for benchmark context and reproducibility.
 
-- captured_utc: 20260323T105550Z
+- captured_utc: 20260323T114412Z
 - os: Arch Linux
 - kernel: Linux 7.0.0-rc3-1-mainline-dirty x86_64
 
@@ -44,7 +44,7 @@ crw-rw----+ 1 root video  226,   0 Mar 23 12:37 card0
 crw-rw-rw-  1 root render 226, 128 Mar 22 02:10 renderD128
 ~~~
 
-## Tool availability
+## Tool availability (default shell)
 
 ~~~text
 xpu-smi=present
@@ -59,6 +59,21 @@ icpx=not-found
 python3=present
 ~~~
 
+## Tool availability after sourcing oneapi-env.sh
+
+~~~text
+xpu-smi=present
+sycl-ls=present
+clinfo=present
+vulkaninfo=present
+cmake=present
+gcc=present
+clang=present
+icx=present
+icpx=present
+python3=present
+~~~
+
 ## xpu-smi discovery
 
 ~~~text
@@ -68,13 +83,13 @@ No device discovered
 ## OpenCL summary
 
 ~~~text
-  Platform Name                                   Intel(R) OpenCL Graphics
+  Platform Name                                   Intel(R) OpenCL
   Platform Vendor                                 Intel(R) Corporation
-  Platform Version                                OpenCL 3.0 
-  Device Name                                     Intel(R) Arc(TM) Graphics
+  Platform Version                                OpenCL 3.0 LINUX
+  Device Name                                     Intel(R) Core(TM) Ultra 7 258V
   Device Vendor                                   Intel(R) Corporation
-  Device Version                                  OpenCL 3.0 NEO 
-  Driver Version                                  26.05.37020
+  Device Version                                  OpenCL 3.0 (Build 0)
+  Driver Version                                  2024.18.12.0.05_160000
 ~~~
 
 ## Vulkan summary
@@ -96,10 +111,17 @@ GPU1:
 	driverInfo         = Mesa 26.1.0-devel (git-1e1d8931c7) (LLVM 21.1.8)
 ~~~
 
-## Intel env var names
+## Intel env var names (default shell)
 
 ~~~text
 none
+~~~
+
+## Intel env var names after sourcing oneapi-env.sh
+
+~~~text
+OCL_ICD_FILENAMES
+ONEAPI_ROOT
 ~~~
 
 ## Raw capture
@@ -107,5 +129,5 @@ none
 The full raw capture for this run was written to:
 
 ~~~text
-00-setup/results/system-info-lunarlake-ultra7-258v-32gb-20260323T105550Z.txt
+00-setup/results/system-info-lunarlake-ultra7-258v-32gb-20260323T114412Z.txt
 ~~~
