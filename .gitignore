@@ -11,6 +11,10 @@ reference/llama.cpp-*/
 !02-operators/results/README.md
 03-openvino/results/*
 !03-openvino/results/README.md
+03-openvino/models/*
+!03-openvino/models/README.md
+03-openvino/assets/*
+!03-openvino/assets/README.md
 04-llama.cpp/results/*
 !04-llama.cpp/results/README.md
 05-vllm/results/*

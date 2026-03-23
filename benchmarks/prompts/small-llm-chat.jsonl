@@ -1,0 +1,3 @@
+{"id":"math-short","messages":[{"role":"user","content":"Answer briefly: what is 17 multiplied by 23?"}]}
+{"id":"intel-summary","messages":[{"role":"user","content":"In 3 short bullet points, explain what Intel Arc GPUs are good for in local AI inference."}]}
+{"id":"rewrite","messages":[{"role":"user","content":"Rewrite this sentence in plain English: 'OpenVINO provides a vendor-optimized inference runtime for Intel hardware.'"}]}

@@ -28,6 +28,7 @@ The initial `05-vllm` pass should include:
 - environment and import checks for upstream `vLLM` XPU
 - environment and import checks for `vllm-openvino`
 - small-model smoke tests on a shared source-format checkpoint
+- OpenAI-compatible serving benchmarks via [benchmarks/openai_api_bench.py](/home/lhl/github/lhl/intel-inference/benchmarks/openai_api_bench.py) so `vLLM` paths can be compared directly against `03-openvino` and `04-llama.cpp`
 - explicit recording of unsupported models, unsupported quants, and missing kernels
 - side-by-side TTFT, TPOT, throughput, and memory notes once the paths are stable
 

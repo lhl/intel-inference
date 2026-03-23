@@ -35,6 +35,7 @@ The initial `04-llama.cpp` pass should include:
 - `llama-bench` sweeps
 - `llama-perplexity` quant regression checks
 - `llama-cli` and `llama-server` smoke and latency tests
+- OpenAI-compatible server benchmarks via [benchmarks/openai_api_bench.py](/home/lhl/github/lhl/intel-inference/benchmarks/openai_api_bench.py) so `llama.cpp` can be compared directly against the `03-openvino` and `05-vllm` serving layers
 - explicit backend limitation notes for unsupported model types or quantizations
 
 ## Related docs

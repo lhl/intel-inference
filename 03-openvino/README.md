@@ -6,20 +6,11 @@ The point of this stage is to answer:
 
 - which OpenVINO-family envs are actually healthy on this machine
 - which OpenVINO devices are visible and usable
-- how CPU, GPU, and NPU compare on simple OpenVINO graphs before we involve full models
-- when OpenVINO GenAI and Optimum Intel are ready for later model-level testing
-
-## What belongs here
-
-- OpenVINO env and device checks
-- OpenVINO GenAI env checks
-- Optimum Intel env checks
-- synthetic compile / first-run / warm-run OpenVINO benchmarks
-- later model export, compile-cache, and runtime-level benchmark scripts
+- which real models export cleanly on the maintained Optimum/OpenVINO path
+- how OpenVINO GenAI behaves on `GPU` and `NPU` for LLM and Whisper workloads
+- whether the shared OpenAI-compatible benchmark path is ready for later `llama.cpp` and `vLLM` comparison
 
 ## Current script set
-
-The first practical pass for this repo is:
 
 - `run-env-checks.sh`
   - checks the `openvino`, `openvino-genai`, and `optimum-openvino` envs
@@ -27,23 +18,28 @@ The first practical pass for this repo is:
 - `run-device-bench.sh`
   - benchmarks simple OpenVINO graphs across `CPU`, `GPU`, and `NPU`
   - reports cold compile, warm compile, first infer, and warm infer timings
+- `prepare-samples.sh`
+  - downloads the tracked Whisper sample audio used by this phase
+- `export-models.sh`
+  - exports supported LLM and ASR checkpoints into `03-openvino/models/`
+  - prefers complete local Hugging Face snapshots and falls back to HF repo IDs when needed
+- `run-llm-smoke.sh`
+  - runs direct OpenVINO GenAI LLM generation on exported models
+- `run-openai-server.sh`
+  - serves an exported OpenVINO GenAI LLM behind a minimal OpenAI-compatible `/v1/chat/completions` API
+- `run-llm-openai-bench.sh`
+  - benchmarks the temporary OpenAI-compatible server with the shared client in [benchmarks/openai_api_bench.py](/home/lhl/github/lhl/intel-inference/benchmarks/openai_api_bench.py)
+- `run-whisper-smoke.sh`
+  - runs direct OpenVINO GenAI Whisper transcription on exported models
+- `run-model-suite.sh`
+  - ties sample prep, export, LLM smoke, OpenAI-compatible LLM benchmark, and Whisper smoke together
 - `run-suite.sh`
-  - ties the env checks and device benchmark together
-
-## Current measurement stance
-
-For now:
-
-- this phase is still synthetic and env-first, not yet model-first
-- device benchmarking uses static-shape `float16` graphs
-- NPU results depend on the Arch loader-path workaround from [00-setup/npu-env.sh](/home/lhl/github/lhl/intel-inference/00-setup/npu-env.sh)
-- OpenVINO GenAI and Optimum Intel are currently checked for env health, not yet benchmarked on real models here
-
-That means this directory is the bridge from setup/operator validation into real OpenVINO runtime and model tests, not the final OpenVINO performance story.
+  - ties env checks and synthetic device benchmarking together
+  - optionally runs `run-model-suite.sh` via `--with-models`
 
 ## Benchmark environments
 
-This phase deliberately splits env health checks from runtime benchmarking:
+This phase deliberately splits export, runtime, and benchmark-client contexts:
 
 - `run-env-checks.sh`
   - `intel-inf-openvino`
@@ -51,68 +47,115 @@ This phase deliberately splits env health checks from runtime benchmarking:
   - `intel-inf-optimum-openvino`
 - `run-device-bench.sh`
   - `intel-inf-openvino`
-  - requires `source ./00-setup/npu-env.sh` on this Arch machine if `NPU` should be visible
-- `run-suite.sh`
-  - combines the above, so the full phase is not one single env
+- `export-models.sh`
+  - `intel-inf-optimum-openvino`
+- `run-llm-smoke.sh`
+  - `intel-inf-openvino-genai`
+- `run-openai-server.sh`
+  - `intel-inf-openvino-genai`
+- `run-llm-openai-bench.sh`
+  - server in `intel-inf-openvino-genai`
+  - benchmark client uses the repo-local stdlib-only [openai_api_bench.py](/home/lhl/github/lhl/intel-inference/benchmarks/openai_api_bench.py)
+- `run-whisper-smoke.sh`
+  - `intel-inf-openvino-genai`
 
-That split matters because `optimum-intel` pulls in a much heavier Hugging Face and `torch` stack than the minimal OpenVINO runtime envs.
+On this Arch machine:
 
-## Current quick-pass results
+- `NPU` tests require `source ./00-setup/npu-env.sh`
+- `CPU`, `GPU`, and `NPU` enumeration is already validated in [00-setup/STATUS.md](/home/lhl/github/lhl/intel-inference/00-setup/STATUS.md)
 
-The current initial validation run is from `./03-openvino/run-suite.sh --quick` on the tracked Lunar Lake machine:
+## Current export status
+
+Current validated export targets on the maintained `optimum-intel 1.27.0` + `transformers 4.57.6` path:
+
+- works:
+  - `meta-llama/Llama-3.2-1B-Instruct`
+  - `LiquidAI/LFM2-1.2B`
+  - `openai/whisper-large-v3-turbo`
+  - `openai/whisper-large-v3`
+- tracked but currently blocked on this maintained export stack:
+  - `Qwen/Qwen3.5-0.8B`
+    - export fails because `transformers 4.57.6` does not recognize `model_type=qwen3_5`
+  - `LiquidAI/LFM2-8B-A1B`
+    - export fails because `transformers 4.57.6` does not recognize `model_type=lfm2_moe`
+
+Those two blocked models remain important research targets for later phases, but they are not part of the default runnable `03-openvino` baseline because the current maintained Optimum stack does not export them cleanly.
+
+## Current validated results
+
+The current first real model pass is from March 23, 2026 on the tracked Lunar Lake machine:
 
 - system profile:
   - [lunarlake-ultra7-258v-32gb.md](/home/lhl/github/lhl/intel-inference/00-setup/systems/lunarlake-ultra7-258v-32gb.md)
-- run date:
-  - March 23, 2026
 
-Headline env and device results:
+### Synthetic device microbench
 
-- env health:
-  - `intel-inf-openvino`: `openvino 2026.0.0`, devices `CPU`, `GPU`, `NPU`
-  - `intel-inf-openvino-genai`: `openvino 2026.0.0`, `openvino-genai 2026.0.0.0`, devices `CPU`, `GPU`, `NPU`
-  - `intel-inf-optimum-openvino`: `openvino 2026.0.0`, `optimum-intel 1.27.0`, devices `CPU`, `GPU`, `NPU`
-- pipeline surface in `intel-inf-openvino-genai`:
-  - `LLMPipeline=True`
-  - `WhisperPipeline=True`
-  - `Text2SpeechPipeline=True`
+From the earlier `./03-openvino/run-suite.sh --quick` synthetic pass:
 
-Headline device-benchmark results from the current quick pass:
+- `GPU` is already the obvious fast path for small `float16` graphs
+- `NPU` compiles and runs synthetic graphs, but the synthetic throughput is far below `GPU`
+- those numbers should be treated as device-path validation, not as a real-model ranking
 
-- CPU:
-  - `matmul 256`: warm infer median about `0.313 ms`, rough median throughput about `0.107 TOPS`
-  - `matmul 512`: warm infer median about `2.367 ms`, rough median throughput about `0.113 TOPS`
-  - `mlp 512`: warm infer median about `7.536 ms`, rough median throughput about `0.285 TOPS`
-- GPU:
-  - `matmul 256`: warm infer median about `0.196 ms`, rough median throughput about `0.171 TOPS`
-  - `matmul 512`: warm infer median about `0.380 ms`, rough median throughput about `0.707 TOPS`
-  - `mlp 512`: warm infer median about `0.465 ms`, rough median throughput about `4.617 TOPS`
-- NPU:
-  - `matmul 256`: warm infer median about `16.888 ms`, rough median throughput about `0.002 TOPS`
-  - `matmul 512`: warm infer median about `24.612 ms`, rough median throughput about `0.011 TOPS`
-  - `mlp 512`: warm infer median about `38.660 ms`, rough median throughput about `0.056 TOPS`
+### LLM results on GPU
 
-Current interpretation:
+From the validated `./03-openvino/run-model-suite.sh --device GPU` pass:
 
-- the OpenVINO family envs are healthy on this machine once the Arch NPU loader-path workaround is in place
-- `GPU` is already the obvious fast path for these small synthetic `float16` graphs
-- `NPU` is now validated for compile and infer, but these quick synthetic results are still far below GPU throughput and should be treated as path validation, not a claim about real-model competitiveness
-- OpenVINO GenAI is no longer hypothetical here; the env has the LLM, Whisper, and TTS pipelines we care about for later model-level testing
+- `meta-llama/Llama-3.2-1B-Instruct`
+  - OpenAI-compatible benchmark median total latency: about `1955.3 ms`
+  - median TTFT: about `157.8 ms`
+  - median completion throughput: about `32.2 tok/s`
+  - direct smoke prompts produced sensible outputs on all three prompts
+- `LiquidAI/LFM2-1.2B`
+  - OpenAI-compatible benchmark median total latency: about `3047.8 ms`
+  - median TTFT: about `96.6 ms`
+  - median completion throughput: about `25.8 tok/s`
+  - runtime works, but output quality on the current prompt set is weak:
+    - the short math prompt returned an empty completion
+    - the longer prompts produced repetitive formatting-heavy outputs
 
-## Expected work products
+That means the OpenAI-compatible serving and measurement path works for both models, but LFM2 currently looks much less usable than Llama on this prompt set even though it exports and runs.
 
-Current or expected files here:
+### Whisper results on GPU and NPU
 
-- `common.sh`
-- `env-check.py`
-- `run-env-checks.sh`
-- `openvino-device-bench.py`
-- `run-device-bench.sh`
-- `run-suite.sh`
-- `results/`
+Validated Whisper smoke results:
+
+- `openai/whisper-large-v3-turbo`
+  - `GPU`: about `954.1 ms`
+  - `NPU`: about `614.2 ms`
+  - transcription: `" How are you doing today?"`
+- `openai/whisper-large-v3`
+  - `GPU`: about `1890.4 ms`
+  - transcription: `" How are you doing today?"`
+
+Both Whisper models now work through `openvino_genai.WhisperPipeline` after exporting them with `automatic-speech-recognition-with-past`.
+
+### Model-level NPU validation
+
+Model-level NPU status is now stronger than just synthetic graph enumeration:
+
+- `meta-llama/Llama-3.2-1B-Instruct`
+  - direct one-prompt smoke on `NPU` completed in about `866.8 ms`
+  - returned the correct math answer
+- `openai/whisper-large-v3-turbo`
+  - direct `NPU` smoke completed in about `614.2 ms`
+  - returned the expected transcription
+
+So on this machine, OpenVINO GenAI on `NPU` is not just nominally visible. It runs at least one real small LLM and one real Whisper model successfully.
+
+## Current interpretation
+
+- OpenVINO, OpenVINO GenAI, and Optimum Intel are now validated here at the env, synthetic-device, and real-model levels.
+- The shared OpenAI-compatible benchmark path is live for OpenVINO LLM testing and is ready to be reused in `04-llama.cpp` and `05-vllm`.
+- The maintained OpenVINO export layer is still narrower than the desired model set:
+  - `qwen3_5` and `lfm2_moe` are blocked before runtime because the pinned maintained `transformers` range does not recognize those architectures
+- OpenVINO GenAI runtime quality is model-dependent:
+  - Llama 3.2 1B looks healthy
+  - LFM2 1.2B exports and runs but does not yet look production-healthy on the current prompt set
+- Whisper on OpenVINO GenAI is now a real working path on both `GPU` and `NPU`
 
 ## Related docs
 
 - [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md)
 - [TESTING.md](/home/lhl/github/lhl/intel-inference/TESTING.md)
 - [00-setup/STATUS.md](/home/lhl/github/lhl/intel-inference/00-setup/STATUS.md)
+- [benchmarks/README.md](/home/lhl/github/lhl/intel-inference/benchmarks/README.md)

@@ -29,6 +29,25 @@ Based on the maintained docs and pinned reference repos in this checkout:
 - `vllm-openvino` is a distinct OpenVINO-backed serving path, not a synonym for generic Intel `vLLM` support.
 - `IPEX-LLM` is useful as historical reference material and gap-mapping, but it is archived and should not be treated as the default path.
 
+## Current validated OpenVINO status
+
+The `03-openvino` phase is no longer only env-level:
+
+- OpenVINO GenAI LLM serving now works locally behind an OpenAI-compatible `/v1/chat/completions` adapter, using the shared [benchmarks/openai_api_bench.py](/home/lhl/github/lhl/intel-inference/benchmarks/openai_api_bench.py) client that we plan to reuse for `llama.cpp` and `vLLM`.
+- Current maintained export/runtime baseline that works here:
+  - `meta-llama/Llama-3.2-1B-Instruct`
+  - `LiquidAI/LFM2-1.2B`
+  - `openai/whisper-large-v3-turbo`
+  - `openai/whisper-large-v3`
+- Current maintained Optimum/OpenVINO export blockers:
+  - `Qwen/Qwen3.5-0.8B`
+  - `LiquidAI/LFM2-8B-A1B`
+- Model-level NPU validation is real now, not just synthetic:
+  - `Llama-3.2-1B-Instruct` ran on `NPU`
+  - `whisper-large-v3-turbo` ran on `NPU`
+
+For the exact export status, exact failure modes, and current GPU/NPU timings, use [03-openvino/README.md](/home/lhl/github/lhl/intel-inference/03-openvino/README.md).
+
 ## Basic Linux setup
 
 The current recommended starting point is:
@@ -100,8 +119,9 @@ Current docs:
 - [`00-setup/`](00-setup/): numbered bring-up area for drivers, oneAPI, envs, and smoke tests
 - [`01-hardware/`](01-hardware/): numbered low-level benchmark area for bandwidth, compute, and telemetry work
 - [`02-operators/`](02-operators/): PyTorch XPU operator bring-up, GEMM, and SDPA benchmarking
-- [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus synthetic runtime checks
+- [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus real model export, runtime, and OpenAI-compatible benchmark checks
 - [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` serving/runtime benchmark layer
+- [`benchmarks/`](benchmarks/): shared benchmark clients, prompt sets, and comparison harnesses reused across runtime phases
 
 Repository layout:
 
@@ -111,6 +131,7 @@ Repository layout:
 - [`03-openvino/`](03-openvino/): OpenVINO-family runtime validation and device microbenchmarks
 - [`04-llama.cpp/`](04-llama.cpp/): planned backend-specific `llama.cpp` sweep layer
 - [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` benchmark layer
+- [`benchmarks/`](benchmarks/): shared OpenAI-compatible benchmark tooling reused across runtime phases
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
 - [`reference/`](reference/): tracked source material plus pinned upstream reference submodules
 

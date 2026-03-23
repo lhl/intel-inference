@@ -4,6 +4,8 @@
 
 OV_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 RESULTS_DIR="${OV_DIR}/results"
+MODELS_DIR="${OV_DIR}/models"
+ASSETS_DIR="${OV_DIR}/assets"
 
 log() {
     printf '[%s] %s\n' "$(basename "$0")" "$*"
@@ -36,6 +38,14 @@ ensure_results_dir() {
     mkdir -p "$RESULTS_DIR"
 }
 
+ensure_models_dir() {
+    mkdir -p "$MODELS_DIR"
+}
+
+ensure_assets_dir() {
+    mkdir -p "$ASSETS_DIR"
+}
+
 timestamp_utc() {
     date -u +%Y%m%dT%H%M%SZ
 }
@@ -54,4 +64,33 @@ maybe_source_npu_workaround() {
         # shellcheck source=00-setup/npu-env.sh
         source "$helper"
     fi
+}
+
+sanitize_name() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '_'
+}
+
+wait_for_http() {
+    local url="$1"
+    local timeout_s="${2:-120}"
+    python - "$url" "$timeout_s" <<'PY'
+import sys
+import time
+import urllib.error
+import urllib.request
+
+url = sys.argv[1]
+timeout_s = float(sys.argv[2])
+deadline = time.time() + timeout_s
+
+while time.time() < deadline:
+    try:
+        with urllib.request.urlopen(url, timeout=2.0) as response:
+            if 200 <= response.status < 500:
+                raise SystemExit(0)
+    except Exception:
+        time.sleep(0.5)
+
+raise SystemExit(f"timed out waiting for {url}")
+PY
 }
