@@ -115,6 +115,8 @@ This file tracks the docs-first research and validation work needed before the R
 
 ## 8. Validation plan for later
 
+- Populate [`00-setup/`](00-setup/) with system inventory capture, driver verification, env bring-up, and smoke-test scripts.
+- Populate [`01-hardware/`](01-hardware/) with baseline memory-bandwidth, compute, and telemetry workflows.
 - Pick a small model set for smoke tests once the docs review stabilizes.
 - Define how we will verify that inference is actually using the intended Intel device.
 - Define one minimal validation path per framework or backend.

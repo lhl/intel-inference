@@ -55,33 +55,46 @@ Rules:
 - PyTorch XPU microbench work can start early because it helps explain kernel ceilings, but it should not replace Tier 1 runtime baselines.
 - `vLLM`, `vllm-openvino`, and SGLang should be treated as later-wave investigation targets, not the first source of Intel conclusions.
 
-## Repository organization we should grow into
+## Repository organization
 
-The Strix Halo repo suggests the right shape:
+The Strix Halo repo suggests the right idea, but this repo should be even more explicit about phase ordering.
+
+Planned numbered layout:
 
 ```text
-hardware-test/
-torch-xpu/
-llm-bench/
-backend-investigations/
-results/
+00-setup/
+01-hardware/
+02-operators/
+03-runtime/
+04-llama.cpp/
+05-models/
+99-results/
 ```
 
-Suggested Intel equivalents:
+Phase meanings:
 
-- `hardware-test/`
+- `00-setup/`
+  - driver, toolchain, and env bring-up
+  - system inventory and smoke tests
+- `01-hardware/`
   - memory bandwidth
   - compute microbenches
   - telemetry capture
-- `torch-xpu/`
+- `02-operators/`
   - GEMM
   - attention / SDPA
   - dtype and quant-path checks
-- `llm-bench/`
-  - `llama.cpp` sweep automation
-  - result summarization
-- `backend-investigations/`
-  - one-off deep dives when a backend behaves oddly
+- `03-runtime/`
+  - PyTorch, OpenVINO, OpenVINO GenAI, and serving-runtime comparisons
+- `04-llama.cpp/`
+  - backend-specific sweep automation
+  - context-depth and quant testing
+- `05-models/`
+  - architecture-family and multimodal validation
+- `99-results/`
+  - summarized machine-readable outputs and final tables
+
+For now, the first two directories to populate are `00-setup/` and `01-hardware/`.
 
 ## Canonical comparison artifacts
 

@@ -1,3 +1,9 @@
 # Ignore local llama.cpp working/build directories used for backend-specific experiments.
 llama.cpp-*/
 reference/llama.cpp-*/
+
+# Ignore captured setup and benchmark outputs while keeping directory docs tracked.
+00-setup/results/*
+!00-setup/results/README.md
+01-hardware/results/*
+!01-hardware/results/README.md
