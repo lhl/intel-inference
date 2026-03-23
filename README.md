@@ -51,6 +51,29 @@ The `03-openvino` phase is no longer only env-level:
 
 For the exact export status, exact failure modes, and current GPU/NPU timings, use [03-openvino/README.md](/home/lhl/github/lhl/intel-inference/03-openvino/README.md).
 
+## Current validated llama.cpp status
+
+The `04-llama.cpp` phase is now at backend build-validation level:
+
+- `Vulkan`
+  - builds cleanly on this Arch Lunar Lake machine with the system Mesa/Vulkan stack
+  - `llama-bench --list-devices` sees `Vulkan0: Intel(R) Graphics (LNL)`
+- `SYCL`
+  - configure succeeds after sourcing [00-setup/oneapi-env.sh](/home/lhl/github/lhl/intel-inference/00-setup/oneapi-env.sh)
+  - build currently fails on Arch because the shipped oneAPI package set does not provide `oneapi/mkl.hpp`, which upstream `ggml-sycl` includes
+- `OpenVINO`
+  - builds successfully against the `intel-inf-openvino` env
+  - on this Arch machine, the current `openvino` pip wheel is not sufficient by itself for `llama.cpp`'s OpenVINO CMake expectations; a small env-local TBB shim is required
+  - backend enumeration works on `CPU`, `GPU`, and `NPU`
+
+That means the current practical `llama.cpp` read here is:
+
+- Vulkan is the cleanest GPU baseline
+- OpenVINO is viable, but with an Arch-specific build workaround
+- SYCL is still blocked on the current Arch oneAPI packaging layout
+
+For the exact commands, current workaround details, and backend-specific build scripts, use [04-llama.cpp/README.md](/home/lhl/github/lhl/intel-inference/04-llama.cpp/README.md).
+
 ## Basic Linux setup
 
 The current recommended starting point is:
@@ -123,6 +146,7 @@ Current docs:
 - [`01-hardware/`](01-hardware/): numbered low-level benchmark area for bandwidth, compute, and telemetry work
 - [`02-operators/`](02-operators/): PyTorch XPU operator bring-up, GEMM, and SDPA benchmarking
 - [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus real model export, runtime, and OpenAI-compatible benchmark checks
+- [`04-llama.cpp/`](04-llama.cpp/): backend-specific `llama.cpp` build validation for `Vulkan`, `SYCL`, and `OpenVINO`
 - [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` serving/runtime benchmark layer
 - [`benchmarks/`](benchmarks/): shared benchmark clients, prompt sets, and comparison harnesses reused across runtime phases
 
@@ -132,7 +156,7 @@ Repository layout:
 - [`01-hardware/`](01-hardware/): raw memory-bandwidth, compute, and telemetry characterization
 - [`02-operators/`](02-operators/): operator-level PyTorch XPU benchmark layer
 - [`03-openvino/`](03-openvino/): OpenVINO-family runtime validation and device microbenchmarks
-- [`04-llama.cpp/`](04-llama.cpp/): planned backend-specific `llama.cpp` sweep layer
+- [`04-llama.cpp/`](04-llama.cpp/): backend-specific `llama.cpp` build validation and upcoming GGUF/runtime sweep layer
 - [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` benchmark layer
 - [`benchmarks/`](benchmarks/): shared OpenAI-compatible benchmark tooling reused across runtime phases
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
