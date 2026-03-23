@@ -49,7 +49,9 @@ The default env split should be:
 - `intel-inf-openvino-genai`
 - `intel-inf-optimum-openvino`
 - `intel-inf-torch-xpu`
-- optional source-build envs for `vLLM` and SGLang
+- `intel-inf-vllm-xpu`
+- `intel-inf-vllm-openvino`
+- optional source-build envs for SGLang or other later-wave stacks
 
 Keep the default OpenVINO envs minimal. Add `optimum-intel[openvino]` only when export or Optimum integration is actually needed.
 

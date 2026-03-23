@@ -19,6 +19,8 @@ reference/llama.cpp-*/
 !04-llama.cpp/results/README.md
 05-vllm/results/*
 !05-vllm/results/README.md
+05-vllm/vllm/
+05-vllm/vllm-openvino/
 
 # Ignore Python bytecode caches from local validation runs.
 __pycache__/

@@ -28,6 +28,9 @@ Based on the maintained docs and pinned reference repos in this checkout:
 - Upstream `vLLM` XPU and SGLang XPU both exist, but they currently look narrower and less mature on Intel than the CUDA- and HIP-first paths.
 - `vllm-openvino` is a distinct OpenVINO-backed serving path, not a synonym for generic Intel `vLLM` support.
 - `IPEX-LLM` is useful as historical reference material and gap-mapping, but it is archived and should not be treated as the default path.
+- The first `05-vllm` pass now makes that split concrete:
+  - `vllm-openvino` currently has the best initial Llama result on this machine, but it is not yet robust across reruns
+  - upstream `vLLM` XPU is newer and broader, but currently less stable
 
 ## Current validated OpenVINO status
 
@@ -82,6 +85,30 @@ The first real GGUF runtime pass tightened that further:
 
 For the exact commands, current workaround details, and backend-specific build scripts, use [04-llama.cpp/README.md](/home/lhl/github/lhl/intel-inference/04-llama.cpp/README.md).
 
+## Current validated vLLM status
+
+The `05-vllm` phase is now active rather than planned.
+
+Current machine read:
+
+- `vllm-openvino`
+  - `Llama-3.2-1B-Instruct` completed one successful `GPU` benchmark run through the shared OpenAI-compatible benchmark client
+  - the current measured pass is about `1990 ms` median total latency, `53 ms` median TTFT, and `28.1 tok/s` median generation speed
+  - an immediate rerun then failed in the on-the-fly OpenVINO export/load path, so this should not be treated as a stable baseline yet
+  - `Qwen3.5-0.8B` and `LFM2-1.2B` both fail before serve because the pinned `vllm-openvino` stack is on `transformers 4.51.3`
+- upstream `vLLM` XPU
+  - uses a newer local source build and can recognize more model families than `vllm-openvino`
+  - `Llama-3.2-1B-Instruct` starts and serves, but the first shared benchmark run was unstable and returned `500` errors on `2/3` prompts
+  - `LFM2-1.2B` reaches engine init, then fails on an internal KV-cache assertion
+  - `Qwen3.5-0.8B` reaches engine init on the newer stack, then fails in the XPU multimodal attention path
+
+That means the current recommendation for this repo is:
+
+- treat `vllm-openvino` as the current best initial Intel `vLLM` result for simple Llama-class GPU serving, but not yet as a stable baseline
+- treat upstream `vLLM` XPU as promising but still exploratory on this hardware
+
+For the exact env split, scripts, and failure details, use [05-vllm/README.md](/home/lhl/github/lhl/intel-inference/05-vllm/README.md).
+
 ## Basic Linux setup
 
 The current recommended starting point is:
@@ -97,6 +124,9 @@ The current recommended starting point is:
    - `llama.cpp` SYCL if you want the Intel-specific GPU backend
    - PyTorch XPU if you want the upstream framework path
 5. Treat `vLLM`, `vllm-openvino`, and SGLang as later-wave stacks after the baseline paths work.
+6. For this repo's current `vLLM` work, prefer the dedicated setup scripts under `00-setup/`:
+   - `setup-vllm-xpu-env.sh`
+   - `setup-vllm-openvino-env.sh`
 
 For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md).
 For the current validated machine bring-up state, use [00-setup/STATUS.md](/home/lhl/github/lhl/intel-inference/00-setup/STATUS.md).
@@ -155,7 +185,7 @@ Current docs:
 - [`02-operators/`](02-operators/): PyTorch XPU operator bring-up, GEMM, and SDPA benchmarking
 - [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus real model export, runtime, and OpenAI-compatible benchmark checks
 - [`04-llama.cpp/`](04-llama.cpp/): backend-specific `llama.cpp` build validation for `Vulkan`, `SYCL`, and `OpenVINO`
-- [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` serving/runtime benchmark layer
+- [`05-vllm/`](05-vllm/): upstream `vLLM` XPU and `vllm-openvino` env validation plus initial OpenAI-compatible serving benchmarks
 - [`benchmarks/`](benchmarks/): shared benchmark clients, prompt sets, and comparison harnesses reused across runtime phases
 
 Repository layout:
@@ -165,7 +195,7 @@ Repository layout:
 - [`02-operators/`](02-operators/): operator-level PyTorch XPU benchmark layer
 - [`03-openvino/`](03-openvino/): OpenVINO-family runtime validation and device microbenchmarks
 - [`04-llama.cpp/`](04-llama.cpp/): backend-specific `llama.cpp` build validation and upcoming GGUF/runtime sweep layer
-- [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` benchmark layer
+- [`05-vllm/`](05-vllm/): `vLLM` XPU and `vllm-openvino` setup, support, and initial benchmark layer
 - [`benchmarks/`](benchmarks/): shared OpenAI-compatible benchmark tooling reused across runtime phases
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
 - [`reference/`](reference/): tracked source material plus pinned upstream reference submodules

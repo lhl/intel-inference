@@ -118,15 +118,18 @@ def make_request(
 
 
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    ok_rows = [row for row in rows if row.get("ok")]
     overall = {
-        "num_runs": len(rows),
-        "median_total_ms": statistics.median([row["total_ms"] for row in rows]) if rows else None,
-        "median_ttft_ms": statistics.median([row["ttft_ms"] for row in rows if row["ttft_ms"] is not None]) if any(
-            row["ttft_ms"] is not None for row in rows
+        "num_requests": len(rows),
+        "num_successes": len(ok_rows),
+        "num_failures": len(rows) - len(ok_rows),
+        "median_total_ms": statistics.median([row["total_ms"] for row in ok_rows]) if ok_rows else None,
+        "median_ttft_ms": statistics.median([row["ttft_ms"] for row in ok_rows if row["ttft_ms"] is not None]) if any(
+            row["ttft_ms"] is not None for row in ok_rows
         ) else None,
         "median_tokens_per_s": statistics.median(
-            [row["tokens_per_s"] for row in rows if row["tokens_per_s"] is not None]
-        ) if any(row["tokens_per_s"] is not None for row in rows) else None,
+            [row["tokens_per_s"] for row in ok_rows if row["tokens_per_s"] is not None]
+        ) if any(row["tokens_per_s"] is not None for row in ok_rows) else None,
     }
 
     by_prompt: dict[str, list[dict[str, Any]]] = {}
@@ -135,14 +138,17 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     prompt_summary: dict[str, Any] = {}
     for prompt_id, prompt_rows in by_prompt.items():
+        prompt_ok_rows = [row for row in prompt_rows if row.get("ok")]
         prompt_summary[prompt_id] = {
-            "num_runs": len(prompt_rows),
-            "median_total_ms": statistics.median([row["total_ms"] for row in prompt_rows]),
-            "median_ttft_ms": statistics.median([row["ttft_ms"] for row in prompt_rows if row["ttft_ms"] is not None])
-            if any(row["ttft_ms"] is not None for row in prompt_rows)
+            "num_requests": len(prompt_rows),
+            "num_successes": len(prompt_ok_rows),
+            "num_failures": len(prompt_rows) - len(prompt_ok_rows),
+            "median_total_ms": statistics.median([row["total_ms"] for row in prompt_ok_rows]) if prompt_ok_rows else None,
+            "median_ttft_ms": statistics.median([row["ttft_ms"] for row in prompt_ok_rows if row["ttft_ms"] is not None])
+            if any(row["ttft_ms"] is not None for row in prompt_ok_rows)
             else None,
-            "median_tokens_per_s": statistics.median([row["tokens_per_s"] for row in prompt_rows if row["tokens_per_s"] is not None])
-            if any(row["tokens_per_s"] is not None for row in prompt_rows)
+            "median_tokens_per_s": statistics.median([row["tokens_per_s"] for row in prompt_ok_rows if row["tokens_per_s"] is not None])
+            if any(row["tokens_per_s"] is not None for row in prompt_ok_rows)
             else None,
         }
 
@@ -272,7 +278,7 @@ def main() -> int:
                     summary_bits.append(f"tok_s={tokens_per_s:.2f}")
                 print(" ".join(summary_bits))
 
-    summary = summarize([row for row in rows if row.get("ok")])
+    summary = summarize(rows)
     if args.summary_json is not None:
         args.summary_json.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 

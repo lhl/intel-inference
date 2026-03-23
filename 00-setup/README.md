@@ -13,6 +13,8 @@ The goal here is simple: before we benchmark anything, we should be able to prov
 - OpenVINO and OpenVINO GenAI env bring-up
 - Optimum Intel env bring-up when Hugging Face export or Optimum runtime coverage matters
 - PyTorch XPU env bring-up
+- upstream `vLLM` XPU env bring-up
+- `vllm-openvino` env bring-up
 - Arch-specific NPU loader-path setup where needed
 - `llama.cpp` backend-specific build and smoke-test notes
 - saved setup artifacts such as version dumps and command outputs
@@ -46,6 +48,8 @@ Current or likely files or scripts here:
 - `setup-openvino-genai-env.sh`
 - `setup-optimum-openvino-env.sh`
 - `setup-torch-xpu-env.sh`
+- `setup-vllm-xpu-env.sh`
+- `setup-vllm-openvino-env.sh`
 - `smoke-*.sh`
 
 ## Related docs
@@ -59,5 +63,6 @@ On the current Lunar Lake Linux machine:
 
 - GPU bring-up is passing with `xe`, OpenCL, Vulkan, PyTorch XPU, and OpenVINO GPU
 - fresh repo-owned envs exist for `intel-inf-openvino`, `intel-inf-openvino-genai`, `intel-inf-optimum-openvino`, and `intel-inf-torch-xpu`
+- fresh repo-owned envs also exist for `intel-inf-vllm-xpu` and `intel-inf-vllm-openvino`
 - OpenVINO NPU works only after exposing `/usr/lib/x86_64-linux-gnu` through `LD_LIBRARY_PATH`
 - oneAPI compiler tooling is installed and verified; source `./00-setup/oneapi-env.sh` before SYCL-native builds
