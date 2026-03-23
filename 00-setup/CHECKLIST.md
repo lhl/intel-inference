@@ -29,6 +29,8 @@ Check:
 
 If SYCL or oneAPI is in scope:
 
+- install the Arch oneAPI packages with `./00-setup/install-oneapi-arch.sh`
+- source `./00-setup/oneapi-env.sh`
 - verify oneAPI is installed
 - verify `sycl-ls` works if available
 - verify Level Zero related tooling is present where needed
@@ -36,16 +38,20 @@ If SYCL or oneAPI is in scope:
 If NPU is in scope:
 
 - verify the NPU driver is installed
+- on Arch with `intel-npu-driver-bin`, source `./00-setup/npu-env.sh`
 - verify the device is visible through the relevant OpenVINO or system tooling
 
 ## 4. Create per-stack envs
 
 The default env split should be:
 
-- `openvino`
-- `openvino-genai`
-- `torch-xpu`
+- `intel-inf-openvino`
+- `intel-inf-openvino-genai`
+- `intel-inf-optimum-openvino`
+- `intel-inf-torch-xpu`
 - optional source-build envs for `vLLM` and SGLang
+
+Keep the default OpenVINO envs minimal. Add `optimum-intel[openvino]` only when export or Optimum integration is actually needed.
 
 Do not try to force everything into one shared Python env.
 
@@ -56,6 +62,7 @@ At minimum, confirm:
 - OpenVINO can load on the target machine
 - OpenVINO GenAI imports and exposes `LLMPipeline`
 - PyTorch can see `torch.xpu` if that path is in scope
+- OpenVINO NPU can enumerate if the machine has an NPU
 - `llama.cpp` backend builds complete for the backends we intend to benchmark
 
 ## 6. Record exact versions

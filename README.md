@@ -37,14 +37,21 @@ The current recommended starting point is:
 2. Install the Intel NPU driver only if your machine has an NPU and you intend to test it.
 3. Use separate `mamba` or `conda` environments per stack instead of one shared environment.
 4. Start with one of these paths:
-   - OpenVINO and Optimum Intel for the most maintained export-and-runtime path
+   - OpenVINO for the smallest maintained runtime baseline
    - OpenVINO GenAI for a more productized local pipeline/runtime layer on top of OpenVINO
+   - a separate Optimum Intel env when you actually need Hugging Face export or Optimum integration
    - `llama.cpp` Vulkan for the lightest initial GPU bring-up
    - `llama.cpp` SYCL if you want the Intel-specific GPU backend
    - PyTorch XPU if you want the upstream framework path
 5. Treat `vLLM`, `vllm-openvino`, and SGLang as later-wave stacks after the baseline paths work.
 
 For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md).
+For the current validated machine bring-up state, use [00-setup/STATUS.md](/home/lhl/github/lhl/intel-inference/00-setup/STATUS.md).
+
+Current Arch-specific note from live validation:
+
+- with `intel-npu-driver-bin`, OpenVINO NPU enumeration worked only after exposing `/usr/lib/x86_64-linux-gnu` through `LD_LIBRARY_PATH`
+- the repo codifies that via [00-setup/npu-env.sh](/home/lhl/github/lhl/intel-inference/00-setup/npu-env.sh)
 
 ## What currently looks alive, weak, or dead
 

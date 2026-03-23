@@ -31,10 +31,11 @@ If you want the least confusing setup today:
 3. Use `mamba` or `conda` only for Python environment isolation.
 4. Use separate envs per stack.
 5. Use official PyTorch XPU wheels for native PyTorch.
-6. Use OpenVINO plus Optimum Intel for the most maintained export-and-runtime path across GPU and NPU.
-7. Use OpenVINO GenAI when you want a lighter-weight pipeline/runtime API layer for local LLM, VLM, Whisper, TTS, embedding, or rerank work.
-8. Use `llama.cpp` with separate build directories for `SYCL`, `Vulkan`, and `OpenVINO`.
-9. Do not treat archived `IPEX-LLM` instructions as the default baseline, especially for old oneAPI pinning.
+6. Use OpenVINO for the smallest maintained Intel runtime baseline.
+7. Use a separate Optimum Intel env for Hugging Face export and Optimum-specific runtime testing.
+8. Use OpenVINO GenAI when you want a lighter-weight pipeline/runtime API layer for local LLM, VLM, Whisper, TTS, embedding, or rerank work.
+9. Use `llama.cpp` with separate build directories for `SYCL`, `Vulkan`, and `OpenVINO`.
+10. Do not treat archived `IPEX-LLM` instructions as the default baseline, especially for old oneAPI pinning.
 
 ## Environment strategy
 
@@ -50,6 +51,7 @@ Repo recommendation:
   - NPU driver, when required
 - Install Python packages inside the env with `pip`, especially for PyTorch XPU wheels and source builds like `vLLM` and `SGLang`.
 - Keep OpenVINO and OpenVINO GenAI in the same release family if you mix them in one env.
+- Keep the default OpenVINO envs minimal. Add `optimum-intel[openvino]` only when you need Optimum export or Hugging Face integration.
 
 This is the main difference from the older Intel GPU experience. For maintained binary installs, manual oneAPI installation is no longer the default. You still need oneAPI for `llama.cpp` SYCL and similar SYCL-native build flows. The old "pin a specific oneAPI release because newer ones break and older ones disappear" pattern shows up most clearly in archived `IPEX-LLM` instructions, not in the maintained PyTorch XPU or OpenVINO paths we should prefer today.
 
@@ -202,6 +204,22 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=accel
 ```
 
+### Arch-specific note from live validation
+
+On the current Arch Lunar Lake machine in this repo:
+
+- the kernel driver and `/dev/accel/accel0` were present
+- the OpenVINO NPU plugin was present
+- OpenVINO still failed to enumerate NPU until `/usr/lib/x86_64-linux-gnu` was added to `LD_LIBRARY_PATH`
+
+That indicates a userspace loader-path issue on this distro/package layout, not a missing kernel driver.
+
+For this repo's Arch setup scripts, the practical fix is:
+
+```bash
+source ./00-setup/npu-env.sh
+```
+
 ## 4. PyTorch XPU
 
 This is the cleanest native PyTorch path on Intel GPU right now.
@@ -266,22 +284,46 @@ PY
 - The binary install path is much easier than the historical Intel GPU path.
 - This does not automatically mean every model family has first-class fused-kernel coverage comparable to CUDA.
 
-## 5. OpenVINO plus Optimum Intel
+## 5. OpenVINO and Optimum Intel
 
 This is the strongest maintained Intel inference path in the current source set, especially if you care about GPU and NPU together.
 
 ### Recommended env layout
 
+Keep the runtime and Optimum layers separate by default:
+
 ```bash
 mamba create -n openvino python=3.11 pip -y
+mamba create -n optimum-openvino python=3.11 pip -y
+```
+
+Use:
+
+```bash
 mamba activate openvino
 python -m pip install --upgrade pip
+python -m pip install -U openvino
+```
+
+And only create the heavier Optimum env when needed:
+
+```bash
+mamba activate optimum-openvino
+python -m pip install --upgrade pip
+python -m pip install -U openvino "optimum-intel[openvino]"
 ```
 
 ### Official Python install
 
+Minimal runtime env:
+
 ```bash
 python -m pip install -U openvino
+```
+
+Add Optimum only when needed:
+
+```bash
 python -m pip install -U "optimum-intel[openvino]"
 ```
 
@@ -290,6 +332,7 @@ Note:
 - Optimum Intel's README still documents the `optimum-intel[openvino]` extra.
 - The same README also says extras are deprecated and will be removed in a future release.
 - When that changes, the practical replacement will likely be a separate `openvino` install plus plain `optimum-intel`.
+- In live repo setup on March 23, 2026, adding `optimum-intel[openvino]` also pulled a large generic `torch` stack from PyPI. That is another reason not to make it the default baseline env.
 
 ### Optional Conda-Forge path
 
@@ -406,7 +449,7 @@ python -m pip install --upgrade pip
 Quickest maintained binary path:
 
 ```bash
-python -m pip install -U openvino-genai
+python -m pip install -U openvino openvino-genai
 ```
 
 If you want model export in the same env:

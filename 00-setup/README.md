@@ -11,7 +11,9 @@ The goal here is simple: before we benchmark anything, we should be able to prov
 - driver verification for Intel GPU and optional Intel NPU
 - oneAPI and SYCL verification when needed
 - OpenVINO and OpenVINO GenAI env bring-up
+- Optimum Intel env bring-up when Hugging Face export or Optimum runtime coverage matters
 - PyTorch XPU env bring-up
+- Arch-specific NPU loader-path setup where needed
 - `llama.cpp` backend-specific build and smoke-test notes
 - saved setup artifacts such as version dumps and command outputs
 
@@ -30,14 +32,19 @@ We should not move on to hardware benchmarking until we have:
 
 Current or likely files or scripts here:
 
+- `common.sh`
 - `collect-system-info.sh`
 - `CHECKLIST.md`
 - `systems/`
+- `install-oneapi-arch.sh`
+- `oneapi-env.sh`
+- `npu-env.sh`
 - `verify-gpu-stack.sh`
 - `verify-npu-stack.sh`
 - `verify-oneapi.sh`
 - `setup-openvino-env.sh`
 - `setup-openvino-genai-env.sh`
+- `setup-optimum-openvino-env.sh`
 - `setup-torch-xpu-env.sh`
 - `smoke-*.sh`
 
@@ -45,3 +52,12 @@ Current or likely files or scripts here:
 
 - [IMPLEMENTATION.md](/home/lhl/github/lhl/intel-inference/IMPLEMENTATION.md)
 - [TESTING.md](/home/lhl/github/lhl/intel-inference/TESTING.md)
+
+## Current machine state
+
+On the current Lunar Lake Linux machine:
+
+- GPU bring-up is passing with `xe`, OpenCL, Vulkan, PyTorch XPU, and OpenVINO GPU
+- fresh repo-owned envs exist for `intel-inf-openvino`, `intel-inf-openvino-genai`, `intel-inf-optimum-openvino`, and `intel-inf-torch-xpu`
+- OpenVINO NPU works only after exposing `/usr/lib/x86_64-linux-gnu` through `LD_LIBRARY_PATH`
+- oneAPI compiler tooling is not installed yet, so SYCL-native builds are still blocked
