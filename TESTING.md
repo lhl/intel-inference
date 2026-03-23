@@ -364,6 +364,12 @@ The first practical implementation in this repo is now:
 - [run-npu-microbench.sh](/home/lhl/github/lhl/intel-inference/01-hardware/run-npu-microbench.sh)
 - [collect-intel-gpu-top.sh](/home/lhl/github/lhl/intel-inference/01-hardware/collect-intel-gpu-top.sh)
 
+The first practical `02-operators` implementation should be:
+
+- [run-backend-check.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-backend-check.sh)
+- [run-gemm-bench.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-gemm-bench.sh)
+- [run-attention-bench.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-attention-bench.sh)
+
 ### OpenVINO
 
 Test:

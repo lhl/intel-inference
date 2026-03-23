@@ -7,6 +7,8 @@ reference/llama.cpp-*/
 !00-setup/results/README.md
 01-hardware/results/*
 !01-hardware/results/README.md
+02-operators/results/*
+!02-operators/results/README.md
 
 # Ignore Python bytecode caches from local validation runs.
 __pycache__/
