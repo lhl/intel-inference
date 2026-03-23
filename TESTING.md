@@ -356,6 +356,13 @@ We should have a dedicated Intel tree for:
 - `backend-check.py`
 - `run-mamf-finder.sh`
 
+The first practical implementation in this repo is now:
+
+- [run-host-mbw.sh](/home/lhl/github/lhl/intel-inference/01-hardware/run-host-mbw.sh)
+- [run-xpu-bandwidth.sh](/home/lhl/github/lhl/intel-inference/01-hardware/run-xpu-bandwidth.sh)
+- [run-mamf-finder.sh](/home/lhl/github/lhl/intel-inference/01-hardware/run-mamf-finder.sh)
+- [collect-intel-gpu-top.sh](/home/lhl/github/lhl/intel-inference/01-hardware/collect-intel-gpu-top.sh)
+
 ### OpenVINO
 
 Test:
