@@ -22,6 +22,16 @@ need_cmd() {
     have_cmd "$1" || die "missing required command: $1"
 }
 
+env_run_bin() {
+    if have_cmd mamba; then
+        printf 'mamba'
+    elif have_cmd conda; then
+        printf 'conda'
+    else
+        die "neither mamba nor conda is available"
+    fi
+}
+
 ensure_results_dir() {
     mkdir -p "$RESULTS_DIR"
 }
@@ -34,4 +44,12 @@ print_cmd() {
     printf '+'
     printf ' %q' "$@"
     printf '\n'
+}
+
+run_in_env() {
+    local env_name="$1"
+    shift
+    local run_bin
+    run_bin="$(env_run_bin)"
+    "$run_bin" run -n "$env_name" "$@"
 }

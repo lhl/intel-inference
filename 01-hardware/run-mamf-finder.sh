@@ -89,7 +89,7 @@ ensure_results_dir
 LOGFILE="${RESULTS_DIR}/${PREFIX}.log"
 JSON_OUT="${RESULTS_DIR}/${PREFIX}.json"
 
-conda run -n "$ENV_NAME" python "${SCRIPT_DIR}/mamf-finder-xpu.py" \
+run_in_env "$ENV_NAME" python "${SCRIPT_DIR}/mamf-finder-xpu.py" \
     --shapes "${SHAPES[@]}" \
     --dtypes "${DTYPES[@]}" \
     --repeats "$REPEATS" \

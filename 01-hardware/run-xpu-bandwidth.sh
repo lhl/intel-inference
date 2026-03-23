@@ -73,7 +73,7 @@ ensure_results_dir
 LOGFILE="${RESULTS_DIR}/${PREFIX}.log"
 JSON_OUT="${RESULTS_DIR}/${PREFIX}.json"
 
-conda run -n "$ENV_NAME" python "${SCRIPT_DIR}/xpu-bandwidth.py" \
+run_in_env "$ENV_NAME" python "${SCRIPT_DIR}/xpu-bandwidth.py" \
     --sizes-mib "${SIZES_MIB[@]}" \
     --repeats "$REPEATS" \
     --warmups "$WARMUPS" \
