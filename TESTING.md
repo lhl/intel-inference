@@ -67,7 +67,8 @@ Planned numbered layout:
 02-operators/
 03-openvino/
 04-llama.cpp/
-05-models/
+05-vllm/
+06-models/
 99-results/
 ```
 
@@ -89,7 +90,9 @@ Phase meanings:
 - `04-llama.cpp/`
   - backend-specific sweep automation
   - context-depth and quant testing
-- `05-models/`
+- `05-vllm/`
+  - upstream `vLLM` XPU and `vllm-openvino` comparisons
+- `06-models/`
   - architecture-family and multimodal validation
 - `99-results/`
   - summarized machine-readable outputs and final tables
@@ -412,6 +415,17 @@ This is where backend-specific operator behavior becomes visible indirectly.
 
 We should use `llama.cpp`'s own tools rather than building a fake wrapper around them.
 
+### vLLM
+
+This should live in its own numbered phase rather than being folded into `03-openvino`.
+
+Keep these tracks separate:
+
+- upstream `vLLM` XPU
+- `vllm-openvino`
+
+That separation matters because `vllm-openvino` is OpenVINO-backed but still a different runtime with its own scheduling, batching, quantization, and feature constraints.
+
 ## Layer 3: Framework and runtime benchmarks
 
 This is the layer most users care about.
@@ -656,11 +670,12 @@ The first real Intel pass should be:
 10. `llama-bench` context-depth sweeps.
 11. `llama-perplexity` on `Q8_0`, `Q6_K`, and `Q4_K_M`.
 12. One PyTorch XPU end-to-end dense-model smoke run with the same canonical source checkpoint.
-13. Only after the above is stable:
+13. Then a dedicated `05-vllm/` phase for:
     - one upstream `vLLM` XPU pass
     - one `vllm-openvino` pass
+14. Only after that:
     - one SGLang XPU pass
-14. After dense baselines are stable, expand to:
+15. After dense baselines are stable, expand to:
     - hybrid or recurrent architecture
     - multimodal
     - Whisper

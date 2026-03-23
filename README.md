@@ -101,6 +101,7 @@ Current docs:
 - [`01-hardware/`](01-hardware/): numbered low-level benchmark area for bandwidth, compute, and telemetry work
 - [`02-operators/`](02-operators/): PyTorch XPU operator bring-up, GEMM, and SDPA benchmarking
 - [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus synthetic runtime checks
+- [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` serving/runtime benchmark layer
 
 Repository layout:
 
@@ -109,6 +110,7 @@ Repository layout:
 - [`02-operators/`](02-operators/): operator-level PyTorch XPU benchmark layer
 - [`03-openvino/`](03-openvino/): OpenVINO-family runtime validation and device microbenchmarks
 - [`04-llama.cpp/`](04-llama.cpp/): planned backend-specific `llama.cpp` sweep layer
+- [`05-vllm/`](05-vllm/): planned `vLLM` XPU and `vllm-openvino` benchmark layer
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
 - [`reference/`](reference/): tracked source material plus pinned upstream reference submodules
 
@@ -130,8 +132,9 @@ Current recommendation order for new testing work:
 2. Finish `01-hardware/` next so we have raw bandwidth and compute baselines before runtime conclusions.
 3. Use `02-operators/` to establish what PyTorch XPU kernels and SDPA paths actually exist on the current machine.
 4. Then move into `03-openvino/` and `04-llama.cpp/` for runtime and backend-level comparisons.
-5. Only after that start broader model-family and serving-stack work.
-6. Every benchmark phase should state the exact env or system-tool context used by each script.
-7. Only after that spend time on `vLLM`, `vllm-openvino`, and SGLang.
+5. Use `05-vllm/` for upstream `vLLM` XPU and `vllm-openvino` rather than mixing those into the OpenVINO baseline phase.
+6. Only after that start broader model-family work.
+7. Every benchmark phase should state the exact env or system-tool context used by each script.
+8. Only after that spend time on SGLang and wider serving-stack comparisons.
 
 The next major step is to turn the docs-derived guidance into validated setup notes, model coverage findings, and real benchmark results.
