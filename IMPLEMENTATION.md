@@ -20,7 +20,7 @@ This document is the current best attempt at a real install and setup guide for 
 - Inference first
 - Intel Arc dGPU and Xe-family iGPU first
 - Intel NPU included, but still secondary
-- PyTorch, OpenVINO, Optimum Intel, vLLM, SGLang, and `llama.cpp`
+- PyTorch, OpenVINO, OpenVINO GenAI, Optimum Intel, vLLM, SGLang, and `llama.cpp`
 
 ## Current recommendation in one page
 
@@ -31,9 +31,10 @@ If you want the least confusing setup today:
 3. Use `mamba` or `conda` only for Python environment isolation.
 4. Use separate envs per stack.
 5. Use official PyTorch XPU wheels for native PyTorch.
-6. Use OpenVINO plus Optimum Intel for the most maintained Intel inference path across GPU and NPU.
-7. Use `llama.cpp` with separate build directories for `SYCL`, `Vulkan`, and `OpenVINO`.
-8. Do not treat archived `IPEX-LLM` instructions as the default baseline, especially for old oneAPI pinning.
+6. Use OpenVINO plus Optimum Intel for the most maintained export-and-runtime path across GPU and NPU.
+7. Use OpenVINO GenAI when you want a lighter-weight pipeline/runtime API layer for local LLM, VLM, Whisper, TTS, embedding, or rerank work.
+8. Use `llama.cpp` with separate build directories for `SYCL`, `Vulkan`, and `OpenVINO`.
+9. Do not treat archived `IPEX-LLM` instructions as the default baseline, especially for old oneAPI pinning.
 
 ## Environment strategy
 
@@ -48,6 +49,7 @@ Repo recommendation:
   - oneAPI, when required
   - NPU driver, when required
 - Install Python packages inside the env with `pip`, especially for PyTorch XPU wheels and source builds like `vLLM` and `SGLang`.
+- Keep OpenVINO and OpenVINO GenAI in the same release family if you mix them in one env.
 
 This is the main difference from the older Intel GPU experience. For maintained binary installs, manual oneAPI installation is no longer the default. You still need oneAPI for `llama.cpp` SYCL and similar SYCL-native build flows. The old "pin a specific oneAPI release because newer ones break and older ones disappear" pattern shows up most clearly in archived `IPEX-LLM` instructions, not in the maintained PyTorch XPU or OpenVINO paths we should prefer today.
 
@@ -368,7 +370,141 @@ If you want LLM inference on NPU through OpenVINO, the current docs are much str
 
 That means the NPU path is real, but much narrower than the generic GPU path.
 
-## 6. vLLM on Intel
+## 6. OpenVINO GenAI
+
+This is not just "OpenVINO but nicer." It is a separate maintained runtime and pipeline layer on top of OpenVINO Runtime.
+
+Why it matters:
+
+- it has first-class pipeline APIs rather than only Hugging Face wrapper flows
+- it covers more than text LLMs:
+  - LLM
+  - VLM
+  - Whisper ASR
+  - SpeechT5 TTS
+  - text embeddings
+  - text rerank
+- it exposes serving-oriented features such as:
+  - continuous batching
+  - prefix caching
+  - speculative decoding
+  - sparse-attention prefill
+- the local repo and tests show stronger evidence than the top-level OpenVINO README alone, including NPU-oriented Whisper and VLM test coverage
+
+### Recommended env layout
+
+If you already have an OpenVINO env, the simplest path is to keep `openvino-genai` there.
+
+```bash
+mamba create -n openvino-genai python=3.11 pip -y
+mamba activate openvino-genai
+python -m pip install --upgrade pip
+```
+
+### Install
+
+Quickest maintained binary path:
+
+```bash
+python -m pip install -U openvino-genai
+```
+
+If you want model export in the same env:
+
+```bash
+python -m pip install -U openvino
+python -m pip install -U "optimum-intel[openvino]"
+```
+
+### Verify
+
+```bash
+python - <<'PY'
+import openvino_genai as ov_genai
+print("LLMPipeline:", ov_genai.LLMPipeline)
+print("WhisperPipeline:", ov_genai.WhisperPipeline)
+print("Text2SpeechPipeline:", ov_genai.Text2SpeechPipeline)
+PY
+```
+
+### Minimal LLM flow
+
+Export a model:
+
+```bash
+optimum-cli export openvino --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 TinyLlama_1_1b_v1_ov
+```
+
+Run it:
+
+```bash
+python - <<'PY'
+import openvino_genai as ov_genai
+pipe = ov_genai.LLMPipeline("TinyLlama_1_1b_v1_ov", "GPU")
+print(pipe.generate("What is OpenVINO?", max_new_tokens=64))
+PY
+```
+
+### Minimal Whisper flow
+
+Export a Whisper model:
+
+```bash
+optimum-cli export openvino --trust-remote-code --model openai/whisper-base whisper-base
+python -m pip install librosa
+```
+
+Run it:
+
+```bash
+python - <<'PY'
+import librosa
+import openvino_genai as ov_genai
+
+audio, _ = librosa.load("how_are_you_doing_today.wav", sr=16000)
+pipe = ov_genai.WhisperPipeline("whisper-base", "GPU")
+result = pipe.generate(audio.tolist(), return_timestamps=True)
+print(result.texts[0])
+PY
+```
+
+### Minimal SpeechT5 flow
+
+OpenVINO GenAI's current text-to-speech path is explicitly SpeechT5-based.
+
+```bash
+optimum-cli export openvino --model microsoft/speecht5_tts --model-kwargs "{\"vocoder\": \"microsoft/speecht5_hifigan\"}" speecht5_tts
+```
+
+Then use `openvino_genai.Text2SpeechPipeline`.
+
+### Built-in benchmark and validation tooling
+
+OpenVINO GenAI is also worth treating as a testing surface, not only an inference library.
+
+The repo already includes:
+
+- `tools/llm_bench` for performance-focused benchmarking across OpenVINO GenAI, Optimum Intel, and selected PyTorch/OpenVINO flows
+- `tools/who_what_benchmark` for similarity-oriented regression checks between baseline Hugging Face outputs and optimized OpenVINO or OpenVINO GenAI outputs
+
+Use these after basic bring-up succeeds; they are a better fit than inventing a custom benchmark harness too early.
+
+Practical rule:
+
+- use `llm_bench` for performance work
+- use `who_what_benchmark` for quality/regression work
+- do not use `who_what_benchmark` to argue that one backend is faster than another
+
+### Build-from-source note
+
+If you build OpenVINO GenAI from source, the repo's own build docs warn about ABI and Python binding issues when OpenVINO GenAI and OpenVINO are not built in a compatible way.
+
+Practical repo rule:
+
+- prefer the binary distribution channels unless you specifically need source builds
+- if you do build from source, keep OpenVINO and OpenVINO GenAI aligned in the same build environment
+
+## 7. vLLM on Intel
 
 There are two Intel-relevant stories now:
 
@@ -377,7 +513,7 @@ There are two Intel-relevant stories now:
 
 They are not the same thing.
 
-### 6.1 Upstream vLLM XPU
+### 7.1 Upstream vLLM XPU
 
 The important change from older Intel guidance is that upstream `vLLM` now documents Intel XPU directly.
 
@@ -437,7 +573,7 @@ Current upstream `vLLM` docs show these Intel GPU caveats:
 
 This is one of the cleanest examples of Intel still lagging the CUDA-first kernel ecosystem.
 
-### 6.2 vLLM OpenVINO
+### 7.2 vLLM OpenVINO
 
 This is a separate backend and should not be confused with upstream XPU.
 
@@ -487,7 +623,7 @@ The `vllm-openvino` README is unusually explicit here:
 
 So this backend can still be useful, but it is not a drop-in substitute for the full CUDA-side vLLM feature story.
 
-## 7. SGLang on Intel
+## 8. SGLang on Intel
 
 Yes, SGLang now has Intel support, but it is clearly younger than its CUDA path.
 
@@ -560,7 +696,7 @@ The attention-backend matrix adds more Intel-specific limits for `intel_xpu`:
 
 So SGLang on Intel is no longer "no support", but it is not yet a broad first-class Intel story in the way its CUDA path is.
 
-## 8. llama.cpp
+## 9. llama.cpp
 
 In this repo, the right way to think about `llama.cpp` on Intel is:
 
@@ -570,7 +706,7 @@ In this repo, the right way to think about `llama.cpp` on Intel is:
 
 This repo already ignores separate build directories like `llama.cpp-sycl`, `llama.cpp-vulkan`, and `llama.cpp-openvino`, so use those.
 
-### 8.1 SYCL build
+### 9.1 SYCL build
 
 This is the backend that still clearly needs oneAPI.
 
@@ -678,7 +814,7 @@ ZES_ENABLE_SYSMAN=1 ./llama.cpp-sycl/bin/llama-cli \
 - memory pressure is a practical limit very quickly
 - older Intel GPUs are not the intended target; the docs call out Arc, Max, Flex, and 11th-gen-or-newer iGPU support
 
-### 8.2 Vulkan build
+### 9.2 Vulkan build
 
 Use this when you want the lightest setup and do not want oneAPI.
 
@@ -720,7 +856,7 @@ cmake --build llama.cpp-vulkan --config Release -j
 
 This makes Vulkan a strong fallback backend, not necessarily the most feature-complete Intel backend.
 
-### 8.3 OpenVINO build
+### 9.3 OpenVINO build
 
 This is the `llama.cpp` backend that matters if you want Intel NPU support.
 
@@ -789,7 +925,7 @@ This backend is much more explicit about its constraints than SYCL or Vulkan:
 - stateful execution is not supported in `llama-server` and `llama-perplexity`
 - the validated model list in the backend docs is text-LLM-centric; multimodal and audio paths are not explicitly validated there yet
 
-## 9. Backend and model-type limits that matter right now
+## 10. Backend and model-type limits that matter right now
 
 This is the short version of "what will probably disappoint you first".
 
@@ -809,21 +945,22 @@ Two extra `llama.cpp` notes:
 - `llama.cpp` overall supports a wide range of architectures, including multimodal and Mamba-family models, but the Intel backend docs do not yet give a clean backend-by-backend model-family matrix.
 - `llama.cpp` multimodal audio support is currently described as highly experimental even before you add Intel-backend-specific uncertainty.
 
-## 10. What I would actually use first
+## 11. What I would actually use first
 
 If I were setting up this repo on a fresh Linux machine today, I would do it in this order:
 
 1. System GPU driver install and `clinfo` verification.
-2. `torch-xpu` env for native PyTorch smoke tests.
-3. `openvino` env for the best maintained Intel path and NPU-adjacent work.
-4. `llama.cpp-vulkan` as the lightest GGUF baseline.
-5. `llama.cpp-sycl` once the oneAPI toolchain is in place.
-6. `llama.cpp-openvino` if NPU or OpenVINO-backed GGUF is the goal.
-7. `vLLM` and `SGLang` only after the basic GPU stack is known-good.
+2. `openvino` env for the best maintained Intel path and NPU-adjacent work.
+3. `openvino-genai` env or package layer for LLM, VLM, Whisper, TTS, embedding, and rerank bring-up.
+4. `torch-xpu` env for native PyTorch smoke tests.
+5. `llama.cpp-vulkan` as the lightest GGUF baseline.
+6. `llama.cpp-sycl` once the oneAPI toolchain is in place.
+7. `llama.cpp-openvino` if NPU or OpenVINO-backed GGUF is the goal.
+8. `vLLM` and `SGLang` only after the basic GPU stack is known-good.
 
 That order reduces ambiguity. If `vLLM` or `SGLang` breaks first, you then know whether you have a real driver/runtime problem or just a serving-engine-specific limitation.
 
-## Sources
+## 12. Sources
 
 Official web sources:
 
@@ -834,7 +971,9 @@ Official web sources:
 - OpenVINO install docs: https://docs.openvino.ai/2026/get-started/install-openvino.html
 - OpenVINO Conda-Forge install docs: https://docs.openvino.ai/2026/get-started/install-openvino/install-openvino-conda.html
 - OpenVINO NPU device docs: https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html
-- OpenVINO GenAI on NPU: https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html
+- OpenVINO GenAI install docs: https://openvinotoolkit.github.io/openvino.genai/docs/getting-started/installation/
+- OpenVINO GenAI on NPU: https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html
+- OpenVINO GenAI docs: https://openvinotoolkit.github.io/openvino.genai/
 - Intel Linux NPU driver releases: https://github.com/intel/linux-npu-driver/releases
 - vLLM GPU installation docs: https://docs.vllm.ai/en/latest/getting_started/installation/gpu/
 - vLLM features matrix: https://docs.vllm.ai/en/stable/features/index.html
@@ -850,5 +989,11 @@ Pinned local sources in this repo:
 - [llama.cpp/docs/backend/OPENVINO.md](/home/lhl/github/lhl/intel-inference/llama.cpp/docs/backend/OPENVINO.md)
 - [llama.cpp/docs/build.md](/home/lhl/github/lhl/intel-inference/llama.cpp/docs/build.md)
 - [reference/openvino/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino/README.md)
+- [reference/openvino.genai/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/README.md)
+- [reference/openvino.genai/samples/python/whisper_speech_recognition/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/samples/python/whisper_speech_recognition/README.md)
+- [reference/openvino.genai/samples/python/speech_generation/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/samples/python/speech_generation/README.md)
+- [reference/openvino.genai/src/docs/BUILD.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/src/docs/BUILD.md)
+- [reference/openvino.genai/tools/llm_bench/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/tools/llm_bench/README.md)
+- [reference/openvino.genai/tools/who_what_benchmark/README.md](/home/lhl/github/lhl/intel-inference/reference/openvino.genai/tools/who_what_benchmark/README.md)
 - [reference/optimum-intel/README.md](/home/lhl/github/lhl/intel-inference/reference/optimum-intel/README.md)
 - [reference/ipex-llm/README.md](/home/lhl/github/lhl/intel-inference/reference/ipex-llm/README.md)

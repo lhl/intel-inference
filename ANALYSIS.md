@@ -7,7 +7,7 @@ This document is a first-pass, docs-backed analysis of the current Intel AI/ML i
 - Platform focus: Linux only
 - Hardware focus: Intel Arc dGPU, Xe-family iGPU, Intel NPU where relevant
 - Workload focus: inference first
-- Framework/runtime focus: PyTorch/XPU, OpenVINO, Optimum Intel, llama.cpp, vLLM, and SGLang where evidence exists
+- Framework/runtime focus: PyTorch/XPU, OpenVINO, OpenVINO GenAI, Optimum Intel, llama.cpp, vLLM, and SGLang where evidence exists
 - Model-family focus: standard decoder LLMs, hybrid architectures, multimodal, ASR, and TTS
 - Benchmark focus: apples-to-apples comparisons across architecture, size class, and quantization where possible
 
@@ -89,6 +89,7 @@ The maintained stack is not uniform:
 - `llama.cpp` Vulkan is the lightest-weight path in docs terms: install Vulkan packages, verify `vulkaninfo`, build with `-DGGML_VULKAN=1`.
 - `llama.cpp` SYCL and `IPEX-LLM` both pull in a heavier oneAPI-based path.
 - OpenVINO-based flows shift the stack toward OpenVINO runtime and device plugins rather than raw SYCL programming.
+- OpenVINO GenAI sits above raw OpenVINO Runtime as a pipeline/runtime layer rather than replacing OpenVINO itself.
 - PyTorch XPU is now documented as a direct upstream path rather than an Intel-only sidecar stack.
 - `vLLM` XPU inherits meaningful constraints from the PyTorch XPU layer and adds its own Python 3.12 and `vllm-xpu-kernels` requirements.
 
@@ -96,10 +97,10 @@ The maintained stack is not uniform:
 
 | Model family | Strongest current Intel path from current evidence | Notes |
 |---|---|---|
-| Standard decoder LLMs | OpenVINO, Optimum Intel, PyTorch XPU, llama.cpp SYCL/OpenVINO, and IPEX-LLM all show meaningful evidence | This is the best-covered category by far |
+| Standard decoder LLMs | OpenVINO, OpenVINO GenAI, Optimum Intel, PyTorch XPU, llama.cpp SYCL/OpenVINO, and IPEX-LLM all show meaningful evidence | This is the best-covered category by far |
 | Hybrid SSM or recurrent-attention architectures | Mixed but promising: `llama.cpp` has Mamba-family model handling, and `optimum-intel` contains explicit Mamba2 and GatedDeltaNet code paths | User-facing docs are weaker than the implementation signals |
 | MoE and large sparse LLMs | Evidence exists mainly in IPEX-LLM, including DeepSeek and Qwen3MoE claims on Arc | Strongest breadth comes from an archived project |
-| Multimodal and VLM | OpenVINO tutorials mention LLaVa; IPEX-LLM lists Qwen-VL, Qwen2-VL, Phi-3-Vision, MiniCPM-V, MiniCPM-o; llama.cpp has multimodal docs and models | Broad evidence exists, but with uneven maturity across stacks |
+| Multimodal and VLM | OpenVINO tutorials mention LLaVa; OpenVINO GenAI supports VLM pipelines and supported-model docs include Qwen2-VL, Qwen2.5-VL, Qwen3-VL, MiniCPM-V, MiniCPM-o, and Phi multimodal variants; IPEX-LLM and llama.cpp add broader supporting evidence | Broad evidence exists, and OpenVINO GenAI materially strengthens the maintained story |
 | ASR and speech understanding | OpenVINO and OpenVINO GenAI both expose Whisper paths; Optimum Intel documents Whisper quantization; whisper.cpp provides a practical local ASR implementation with OpenVINO acceleration; IPEX-LLM adds archived breadth beyond that | Speech now looks materially more concrete than this repo first assumed |
 | TTS | OpenVINO GenAI explicitly supports SpeechT5; Optimum Intel code and tests show SpeechT5 support; IPEX-LLM lists Bark and SpeechT5 | TTS still looks thinner than text LLMs, but no longer purely implementation-level |
 
@@ -115,6 +116,7 @@ Specific architectures called out for later validation:
 |---|---|---|
 | PyTorch XPU | Official docs plus the PyTorch snapshot claim support for inference, training, `torch.compile`, and common precision modes on Intel GPU | Intel is pushing upstream XPU parity, but exact model-family and quant coverage still need direct verification |
 | OpenVINO | OpenVINO emphasizes graph compilation, kernel fusion, device plugins, `torch.compile`, and GenAI pipelines | This looks like the main maintained Intel optimization layer, especially outside pure PyTorch eager execution |
+| OpenVINO GenAI | Pipeline-oriented runtime layer with LLM, VLM, Whisper, TTS, embeddings, rerank, and continuous batching features on top of OpenVINO | Likely the clearest maintained local runtime path for non-PyTorch Intel inference beyond raw export flows |
 | llama.cpp SYCL | Intel-first backend with oneDNN, oneMKL, Level Zero, and Flash Attention notes | This is likely the strongest Intel-specific local inference path when GGUF is acceptable |
 | llama.cpp Vulkan | Generic GPU path with relatively simple Linux build requirements | Attractive as a fallback path, but the docs are not Intel-specialized |
 | vLLM | Upstream docs show explicit Intel XPU support, but it is still constrained and custom-kernel-dependent | Likely still a major gap area versus NVIDIA and AMD |
@@ -132,7 +134,7 @@ Specific architectures called out for later validation:
   - both inference and training are documented, along with eager mode and `torch.compile`
 - This is enough to treat PyTorch XPU as a maintained upstream path, though not enough to assume architecture-level parity without testing.
 
-#### OpenVINO and Optimum Intel
+#### OpenVINO, OpenVINO GenAI, and Optimum Intel
 
 - OpenVINO explicitly positions itself as an inference toolkit for Intel CPU, GPU, and NPU, and explicitly points users to Optimum Intel, `torch.compile`, and `vllm-openvino`.
 - OpenVINO also explicitly highlights LLaVa and Whisper tutorial material and maintains NPU-specific device and GenAI documentation.
@@ -140,6 +142,17 @@ Specific architectures called out for later validation:
   - Whisper speech recognition
   - SpeechT5 speech generation
   - LLM, VLM, and embedding pipelines on the same runtime base
+- OpenVINO GenAI also adds:
+  - text rerank pipelines
+  - continuous batching and prefix caching
+  - speculative decoding and sparse-attention features for generation workloads
+- The repo also ships its own evaluation tooling:
+  - `tools/llm_bench` for performance-oriented benchmarking
+  - `tools/who_what_benchmark` for similarity-oriented output comparison against Hugging Face baselines
+- `tools/who_what_benchmark` should not be treated as evidence for latency or throughput claims; it is a quality/regression tool, not a performance benchmark.
+- The local repo also contains stronger-than-README evidence:
+  - Whisper static tests comparing CPU and NPU outputs
+  - VLM tests that exercise NPU configurations
 - Optimum Intel clearly documents causal LM export and inference, and also documents Whisper quantization.
 - Beyond the README, Optimum Intel contains implementation-level signals for newer hybrid architectures:
   - `modeling_decoder.py` contains explicit `Mamba2` state handling.
@@ -196,7 +209,7 @@ Specific architectures called out for later validation:
 ### 1. Where the evidence is strong
 
 - Strongest maintained inference story:
-  - OpenVINO plus Optimum Intel for general Intel inference, especially GPU and NPU
+  - OpenVINO plus OpenVINO GenAI plus Optimum Intel for general Intel inference, especially GPU and NPU
   - llama.cpp SYCL and OpenVINO for local LLM inference on Intel hardware
 - Strongest evidence that Intel can cover non-text workloads:
   - OpenVINO tutorial positioning for LLaVa and Whisper
@@ -235,7 +248,7 @@ Specific architectures called out for later validation:
 
 1. Breadth vs maintainability
 
-The broadest Intel-specific evidence is in `IPEX-LLM`, but it is archived. The most maintainable-looking paths are OpenVINO, Optimum Intel, and llama.cpp, but those sources currently communicate less breadth at the top level than IPEX-LLM did.
+The broadest Intel-specific evidence is in `IPEX-LLM`, but it is archived. The most maintainable-looking paths are OpenVINO, OpenVINO GenAI, Optimum Intel, and llama.cpp, and OpenVINO GenAI in particular now surfaces more of that breadth at the product level than this repo initially assumed.
 
 2. Backend maturity vs ecosystem ergonomics
 
@@ -269,7 +282,7 @@ OpenVINO and Optimum Intel likely support more than their READMEs explicitly adv
 Intel's Linux inference story is more real than many people assume:
 
 - upstream-facing PyTorch XPU work exists
-- OpenVINO and Optimum Intel provide a maintained path across GPU and NPU
+- OpenVINO, OpenVINO GenAI, and Optimum Intel provide a maintained path across GPU and NPU
 - llama.cpp gives Intel multiple viable local inference backends
 - historical Intel work in IPEX-LLM shows that multimodal, speech, TTS, and even large sparse models were not ignored
 
@@ -291,15 +304,15 @@ On this reading, Intel has a credible inference substrate, but it still trails i
 The most defensible current synthesis is:
 
 1. Standard LLM inference on Intel Linux is credible today.
-2. The strongest maintained documentation path is OpenVINO plus Optimum Intel, with llama.cpp as a practical local inference path and escape hatch.
+2. The strongest maintained documentation path is OpenVINO plus OpenVINO GenAI plus Optimum Intel, with llama.cpp as a practical local inference path and escape hatch.
 3. PyTorch XPU matters and looks promising, but it needs direct model-family verification.
-4. Breadth beyond standard text LLMs exists, but a lot of that breadth is either archived, implementation-level, or insufficiently documented.
+4. Breadth beyond standard text LLMs exists, and OpenVINO GenAI now makes more of that breadth visible at the maintained runtime level than this repo first captured.
 5. vLLM and SGLang are still where Intel is most likely to look behind CUDA and HIP ecosystems.
 
 ## Priority research passes after this document
 
 1. Add first-party reference repos for upstream `vllm`, `vllm-openvino`, and `sglang`.
-2. Trace exact model-family coverage in `optimum-intel` and OpenVINO tests for:
+2. Trace exact model-family coverage in `optimum-intel`, OpenVINO, and OpenVINO GenAI for:
    - hybrid models
    - multimodal models
    - ASR
@@ -331,6 +344,8 @@ The most defensible current synthesis is:
 - `reference/openvino/tests/model_hub_tests/pytorch/test_hf_transformers.py` at `ea61688641`
 - `reference/openvino.genai/README.md` at `bb6dc5c114`
 - `reference/openvino.genai/tests/python_tests/test_whisper_pipeline.py` at `bb6dc5c114`
+- `reference/openvino.genai/tests/python_tests/test_whisper_pipeline_static.py` at `bb6dc5c114`
+- `reference/openvino.genai/tests/python_tests/test_vlm_pipeline.py` at `bb6dc5c114`
 - `reference/optimum-intel/README.md` at `abe58d751`
 - `reference/optimum-intel/optimum/intel/openvino/modeling_decoder.py` at `abe58d751`
 - `reference/optimum-intel/optimum/exporters/openvino/model_patcher.py` at `abe58d751`
@@ -349,6 +364,10 @@ The most defensible current synthesis is:
 - OpenVINO install docs: `https://docs.openvino.ai/2026/get-started/install-openvino.html`
 - OpenVINO NPU device docs: `https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html`
 - OpenVINO GenAI on NPU: `https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html`
+- OpenVINO GenAI docs: `https://openvinotoolkit.github.io/openvino.genai/`
+- OpenVINO GenAI supported models: `https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/`
+- OpenVINO GenAI speech recognition: `https://openvinotoolkit.github.io/openvino.genai/docs/use-cases/speech-recognition/`
+- OpenVINO GenAI speech generation: `https://openvinotoolkit.github.io/openvino.genai/docs/use-cases/speech-generation/`
 - vLLM GPU install docs: `https://docs.vllm.ai/en/latest/getting_started/installation/gpu/`
 - vLLM quantization docs: `https://docs.vllm.ai/en/latest/features/quantization/`
 - `vllm-openvino`: `https://github.com/vllm-project/vllm-openvino`

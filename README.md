@@ -9,7 +9,7 @@ Initial scope:
 - Linux-focused; Linux is the only platform in scope for now
 - Inference first
 - Training and general AI/ML development are secondary interests
-- PyTorch, vLLM, llama.cpp, and adjacent serving/runtime paths such as OpenVINO-backed flows and SGLang where relevant
+- PyTorch, OpenVINO, OpenVINO GenAI, Optimum Intel, vLLM, llama.cpp, and adjacent serving/runtime paths such as SGLang where relevant
 - Model coverage should include standard LLMs, newer hybrid architectures, multimodal models, ASR, and TTS where Intel support meaningfully differs
 - Reproducible setup notes, validation steps, and known limitations
 
@@ -20,8 +20,9 @@ This is still an early docs-first repo. The goal right now is to turn scattered 
 Based on the maintained docs and pinned reference repos in this checkout:
 
 - Best-supported maintained Intel inference paths today look like:
-  - OpenVINO and Optimum Intel
+  - OpenVINO, OpenVINO GenAI, and Optimum Intel
   - `llama.cpp` via SYCL, Vulkan, or OpenVINO
+- `openvino.genai` looks like a genuine first-class runtime layer, not just a thin wrapper, and it ships its own performance and accuracy-oriented tooling.
 - For speech-specific work, the two most concrete maintained paths worth tracking are `openvino.genai` and `whisper.cpp`.
 - PyTorch XPU now has a real upstream path and is important, but still needs model-family and quantization validation on Intel hardware.
 - Upstream `vLLM` XPU and SGLang XPU both exist, but they currently look narrower and less mature on Intel than the CUDA- and HIP-first paths.
@@ -36,7 +37,8 @@ The current recommended starting point is:
 2. Install the Intel NPU driver only if your machine has an NPU and you intend to test it.
 3. Use separate `mamba` or `conda` environments per stack instead of one shared environment.
 4. Start with one of these paths:
-   - OpenVINO and Optimum Intel for the most maintained Intel-focused path
+   - OpenVINO and Optimum Intel for the most maintained export-and-runtime path
+   - OpenVINO GenAI for a more productized local pipeline/runtime layer on top of OpenVINO
    - `llama.cpp` Vulkan for the lightest initial GPU bring-up
    - `llama.cpp` SYCL if you want the Intel-specific GPU backend
    - PyTorch XPU if you want the upstream framework path
@@ -47,7 +49,7 @@ For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENT
 ## What currently looks alive, weak, or dead
 
 - Strongest maintained direction:
-  - OpenVINO, Optimum Intel, and Intel-backed OpenVINO/NPU flows
+  - OpenVINO, OpenVINO GenAI, Optimum Intel, and Intel-backed OpenVINO/NPU flows
   - `openvino.genai` for Whisper and SpeechT5-class speech pipelines
   - upstream PyTorch XPU
   - `llama.cpp` Intel-relevant backends
@@ -64,8 +66,9 @@ For the actual package, driver, oneAPI, env-var, and build steps, use [IMPLEMENT
 The current development story appears to center on:
 
 - upstream PyTorch XPU rather than a separate Intel-only PyTorch fork
-- OpenVINO and Optimum Intel for optimized Intel inference, especially across GPU and NPU
+- OpenVINO, OpenVINO GenAI, and Optimum Intel for optimized Intel inference, especially across GPU and NPU
 - `llama.cpp` backend work for practical local inference on Intel hardware
+- OpenVINO GenAI and OVMS-style serving layers rather than only Hugging Face wrapper flows
 - selective Intel support in serving stacks rather than clear first-class parity with CUDA-first ecosystems
 
 That is enough to start writing useful setup and support guidance now, even before the performance testing phase is complete.
@@ -108,7 +111,7 @@ git submodule update --init --recursive
 Current recommendation order for new testing work:
 
 1. Get OpenVINO or `llama.cpp` running first.
-2. Bring up PyTorch XPU and basic operator checks.
+2. Bring up OpenVINO GenAI or PyTorch XPU depending on whether you care more about pipeline coverage or framework-native behavior.
 3. Only then spend time on `vLLM`, `vllm-openvino`, and SGLang.
 
 The next major step is to turn the docs-derived guidance into validated setup notes, model coverage findings, and real benchmark results.

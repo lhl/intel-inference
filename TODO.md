@@ -14,7 +14,7 @@ This file tracks the docs-first research and validation work needed before the R
 ## 2. Current working assumptions from the docs pass
 
 - `llama.cpp` appears to offer three serious Linux backend paths for Intel hardware: SYCL, Vulkan, and OpenVINO.
-- `OpenVINO` and `Optimum Intel` appear to be the main maintained Intel inference path across CPU, GPU, and NPU.
+- `OpenVINO`, `OpenVINO GenAI`, and `Optimum Intel` appear to be the main maintained Intel inference path across CPU, GPU, and NPU.
 - `IPEX-LLM` contains useful Linux GPU, vLLM, and NPU setup material, but the repo is archived and explicitly warns about known security issues, so it should be treated as a reference source rather than a default recommendation.
 - vLLM support in the current local references looks integration-specific rather than something we should assume is natively upstream and straightforward on Intel hardware.
 - Intel support may vary sharply by model family and kernel coverage, especially relative to CUDA-first and HIP-enabled ecosystems.
@@ -23,6 +23,7 @@ This file tracks the docs-first research and validation work needed before the R
 
 - Review [`llama.cpp/`](llama.cpp/) docs for SYCL, Vulkan, and OpenVINO backend support on Linux.
 - Review [`reference/openvino/`](reference/openvino/) docs for install paths, supported devices, GenAI positioning, and Intel GPU/NPU runtime requirements.
+- Review [`reference/openvino.genai/`](reference/openvino.genai/) docs, samples, and tests for runtime APIs, supported model families, and NPU-specific evidence.
 - Review [`reference/optimum-intel/`](reference/optimum-intel/) docs for Hugging Face export, inference, and quantization flows through OpenVINO.
 - Review [`reference/ipex-llm/`](reference/ipex-llm/) docs for Arc, Xe, NPU, and vLLM setup claims on Linux, while clearly separating useful guidance from archived-project risk.
 - Review tracked local snapshots in [`reference/`](reference/) for supporting claims and point-in-time references that may not match current upstream docs.
@@ -84,13 +85,16 @@ This file tracks the docs-first research and validation work needed before the R
 - Record model-format, precision, and first-run warm-up caveats where documented.
 - Determine how far llama.cpp can serve as an escape hatch when PyTorch-native or serving-engine-native Intel support is weak.
 
-### OpenVINO and Optimum Intel
+### OpenVINO, OpenVINO GenAI, and Optimum Intel
 
 - Determine when plain `openvino` is enough and when `optimum-intel` adds value for the workflows we care about.
 - Record the OpenVINO-supported device story for GPU and NPU on Linux.
 - Determine whether OpenVINO should be treated as a primary path for PyTorch-adjacent inference and/or as the Intel path for vLLM.
-- Identify any OpenVINO GenAI or Optimum Intel flows that are worth documenting in the first public version of this repo.
+- Determine where OpenVINO GenAI should be treated as a first-class runtime path rather than just an OpenVINO adjunct.
+- Identify which OpenVINO GenAI or Optimum Intel flows are worth documenting in the first public version of this repo.
 - Determine which model types are actually covered well by OpenVINO-based paths beyond standard text LLMs, especially multimodal, ASR, and TTS workloads.
+- Determine whether OpenVINO GenAI's continuous batching, speculative decoding, embeddings, and rerank features deserve their own section in the public docs.
+- Decide how much of `reference/openvino.genai/tools/llm_bench/` and `reference/openvino.genai/tools/who_what_benchmark/` should become part of the repo's default validation story.
 
 ### IPEX-LLM
 

@@ -18,7 +18,7 @@ We want to answer five different questions, not one:
 1. What can the hardware do in theory?
 2. What does the hardware actually deliver at the low level?
 3. Which kernels and operator paths exist on Intel, and how fast are they?
-4. How much performance do full runtimes like PyTorch, OpenVINO, `llama.cpp`, `vLLM`, and SGLang extract from the same hardware?
+4. How much performance do full runtimes like PyTorch, OpenVINO, OpenVINO GenAI, `llama.cpp`, `vLLM`, and SGLang extract from the same hardware?
 5. Which model families work well enough to document, and which ones only work on paper or in narrow configurations?
 
 ## Principles
@@ -37,6 +37,7 @@ We should not treat every stack as equally mature on Intel Linux.
 
 - Tier 1 baseline runtimes:
   - OpenVINO and Optimum Intel
+  - OpenVINO GenAI
   - `llama.cpp` Vulkan
   - `llama.cpp` SYCL
   - `llama.cpp` OpenVINO
@@ -98,7 +99,7 @@ Cross-stack comparisons need explicit artifact rules.
 
 Rules:
 
-- PyTorch, OpenVINO, Optimum Intel, `vLLM`, and SGLang should be compared using the same source-format checkpoint where possible.
+- PyTorch, OpenVINO, OpenVINO GenAI, Optimum Intel, `vLLM`, and SGLang should be compared using the same source-format checkpoint where possible.
 - `llama.cpp` can participate in source-format-adjacent comparisons only through explicitly documented conversion steps from that same source checkpoint.
 - GGUF results belong in a separate comparison table from source-format results.
 
@@ -352,6 +353,19 @@ Test:
 - profile output for large linear / attention-heavy models
 - NPU-specific export and static-shape behavior
 
+### OpenVINO GenAI
+
+Test:
+
+- `LLMPipeline` and `VLMPipeline` bring-up
+- `WhisperPipeline` and `Text2SpeechPipeline` bring-up
+- continuous batching and prefix caching behavior
+- speculative decoding and sparse-attention options where they apply
+- `tools/llm_bench` as the default GenAI-side performance harness for LLM/VLM comparisons
+- `tools/who_what_benchmark` as the default OpenVINO-side similarity and regression harness
+- do not use `tools/who_what_benchmark` to make performance claims; use it only to detect output drift after export, quantization, or backend changes
+- embeddings and rerank later, after the core generation paths are stable
+
 ### llama.cpp
 
 This is where backend-specific operator behavior becomes visible indirectly.
@@ -378,7 +392,7 @@ Metrics:
 - compile overhead
 - peak memory
 
-### OpenVINO and Optimum Intel
+### OpenVINO, OpenVINO GenAI, and Optimum Intel
 
 Test categories:
 
@@ -387,13 +401,23 @@ Test categories:
 - first token latency
 - steady-state throughput
 - GPU vs NPU behavior
+- pipeline API behavior for:
+  - `LLMPipeline`
+  - `VLMPipeline`
+  - `WhisperPipeline`
+  - `Text2SpeechPipeline`
+- continuous batching behavior where GenAI exposes it
+- OpenVINO GenAI `llm_bench` performance runs before inventing custom wrappers
+- OpenVINO GenAI `wwb` similarity checks when quantization or export changes may affect output quality
+- no throughput or latency conclusion should cite `wwb`; those claims must come from `llm_bench` or our own controlled measurements
 
 Model types to start with:
 
 - one dense LLM
 - Whisper
 - one multimodal model
-- one TTS model once a maintained path is identified
+- one TTS model
+- one embedding or rerank model later, after the generation paths are stable
 
 ### llama.cpp
 
@@ -582,19 +606,21 @@ The first real Intel pass should be:
 3. A `mamf-finder`-style GEMM sweep for PyTorch XPU.
 4. A basic attention benchmark for PyTorch XPU.
 5. Tier 1 dense baseline smoke on OpenVINO and Optimum Intel.
-6. One OpenVINO NPU compile and cache test if hardware exists.
-7. `llama.cpp` backend comparison across:
+6. One OpenVINO GenAI dense-model smoke run.
+7. One OpenVINO GenAI Whisper smoke run.
+8. One OpenVINO NPU compile and cache test if hardware exists.
+9. `llama.cpp` backend comparison across:
    - Vulkan
    - SYCL
    - OpenVINO
-8. `llama-bench` context-depth sweeps.
-9. `llama-perplexity` on `Q8_0`, `Q6_K`, and `Q4_K_M`.
-10. One PyTorch XPU end-to-end dense-model smoke run with the same canonical source checkpoint.
-11. Only after the above is stable:
+10. `llama-bench` context-depth sweeps.
+11. `llama-perplexity` on `Q8_0`, `Q6_K`, and `Q4_K_M`.
+12. One PyTorch XPU end-to-end dense-model smoke run with the same canonical source checkpoint.
+13. Only after the above is stable:
     - one upstream `vLLM` XPU pass
     - one `vllm-openvino` pass
     - one SGLang XPU pass
-12. After dense baselines are stable, expand to:
+14. After dense baselines are stable, expand to:
     - hybrid or recurrent architecture
     - multimodal
     - Whisper
@@ -604,7 +630,7 @@ The first real Intel pass should be:
 
 - What is the best public low-level GPU bandwidth microbench for Intel on Linux?
 - Is there any credible low-level NPU throughput microbench, or do we need to build one?
-- Which model families can we keep truly apples-to-apples across PyTorch, OpenVINO, `llama.cpp`, `vLLM`, and SGLang?
+- Which model families can we keep truly apples-to-apples across PyTorch, OpenVINO, OpenVINO GenAI, `llama.cpp`, `vLLM`, and SGLang?
 - Which hybrid and multimodal model families have enough maintained Intel support to deserve first-wave benchmarking?
 - Which quantization methods are actually equivalent enough across stacks to justify direct comparison?
 
