@@ -69,8 +69,16 @@ The `04-llama.cpp` phase is now at backend build-validation level:
 That means the current practical `llama.cpp` read here is:
 
 - Vulkan is the cleanest GPU baseline
-- OpenVINO is viable, but with an Arch-specific build workaround
+- OpenVINO builds with an Arch-specific workaround, but the current GGUF runtime path is not yet usable enough here for a real comparison set
 - SYCL is still blocked on the current Arch oneAPI packaging layout
+
+The first real GGUF runtime pass tightened that further:
+
+- Vulkan completed a full `llama-bench -fa 1` sweep on `Llama-3.2-1B` and `LFM2.5-1.2B` in both `BF16` and `Q4_K_XL`
+- the current OpenVINO GGUF path did not produce comparable model-level numbers:
+  - GPU `llama-bench` segfaulted on both `BF16` and `Q4_K_XL`
+  - GPU `llama-cli` also segfaulted on `Q4_K_XL`
+  - default-device OpenVINO `CPU` `llama-bench` failed prompt warmup on `Q4_K_XL`
 
 For the exact commands, current workaround details, and backend-specific build scripts, use [04-llama.cpp/README.md](/home/lhl/github/lhl/intel-inference/04-llama.cpp/README.md).
 

@@ -79,9 +79,92 @@ What is validated here right now:
 
 What is not validated yet:
 
-- real GGUF model runs on any `04-llama.cpp` backend
-- quant-by-quant compatibility on `Vulkan`, `SYCL`, or `OpenVINO`
+- real GGUF model runs on `OpenVINO` or `SYCL`
+- broader quant-by-quant compatibility beyond the current `BF16` and `Q4_K_XL` spot checks
 - OpenAI-compatible server benchmarking through `llama-server`
+
+## Initial /models/gguf bench pass
+
+First runtime comparison pass from March 24, 2026:
+
+- models:
+  - `/models/gguf/Llama-3.2-1B-Instruct-BF16.gguf`
+  - `/models/gguf/Llama-3.2-1B-Instruct-UD-Q4_K_XL.gguf`
+  - `/models/gguf/LFM2.5-1.2B-Instruct-BF16.gguf`
+  - `/models/gguf/LFM2.5-1.2B-Instruct-UD-Q4_K_XL.gguf`
+- benchmark shape:
+  - `llama-bench`
+  - default `r=5`
+  - default `pp512/tg128`
+  - `-fa 1`
+
+### Vulkan results
+
+Backend and command shape:
+
+```bash
+04-llama.cpp/llama.cpp-vulkan/build-intel/bin/llama-bench \
+  -m /models/gguf/<model>.gguf \
+  -fa 1 \
+  -dev Vulkan0 \
+  -o jsonl
+```
+
+Summary:
+
+| Model | Prompt tok/s | Gen tok/s |
+| --- | ---: | ---: |
+| `Llama-3.2-1B-Instruct-BF16` | `924.05` | `31.93` |
+| `Llama-3.2-1B-Instruct-Q4_K_XL` | `1705.28` | `42.04` |
+| `LFM2.5-1.2B-Instruct-BF16` | `930.25` | `34.06` |
+| `LFM2.5-1.2B-Instruct-Q4_K_XL` | `1790.30` | `50.37` |
+
+Immediate read:
+
+- Vulkan is the only backend that produced a full comparable result set on this machine
+- both Q4 models are clearly faster than BF16 on prompt processing and generation
+- `LFM2.5` is close to `Llama-3.2` in BF16 prompt throughput and a bit faster in generation
+- `LFM2.5 Q4_K_XL` was the fastest generation case in this first pass
+
+Raw files:
+
+- `04-llama.cpp/results/bench-vulkan-fa1-r5-20260323T190254Z.jsonl`
+- `04-llama.cpp/results/bench-vulkan-fa1-r5-20260323T190254Z.stderr.log`
+
+### OpenVINO results
+
+OpenVINO did not produce a comparable model-level result set.
+
+What failed:
+
+- `llama-bench` with `GGML_OPENVINO_DEVICE=GPU` segfaulted immediately on:
+  - `Llama-3.2-1B-Instruct-BF16`
+  - `Llama-3.2-1B-Instruct-Q4_K_XL`
+- removing `-dev OPENVINO0` did not help
+- `llama-cli` on `Llama-3.2-1B-Instruct-Q4_K_XL` with `GGML_OPENVINO_DEVICE=GPU` also segfaulted:
+  - with `-fa on`
+  - with `-fa off`
+- `llama-bench` on the default OpenVINO `CPU` device for `Llama-3.2-1B-Instruct-Q4_K_XL` did not segfault, but still failed benchmark warmup:
+  - `test_prompt: failed to decode prompt batch, res = -3`
+
+So the current finding is not just "OpenVINO GPU is slower." The current OpenVINO GGUF runtime path is not usable enough on this machine to produce a valid comparison set yet.
+
+Raw files:
+
+- `04-llama.cpp/results/bench-openvino-gpu-fa1-r5-20260323T190422Z.jsonl`
+- `04-llama.cpp/results/bench-openvino-gpu-fa1-r5-20260323T190422Z.stderr.log`
+
+### SYCL status for this bench pass
+
+There is no SYCL result set because the SYCL backend still does not build on this Arch machine:
+
+- compile fails on `fatal error: 'oneapi/mkl.hpp' file not found`
+
+So for this first small-model pass, the practical comparison is:
+
+- Vulkan: working
+- OpenVINO: not benchmarkable yet on the requested path
+- SYCL: build-blocked
 
 ## Backend-specific results
 
