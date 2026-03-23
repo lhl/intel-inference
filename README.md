@@ -45,6 +45,9 @@ The `03-openvino` phase is no longer only env-level:
 - Model-level NPU validation is real now, not just synthetic:
   - `Llama-3.2-1B-Instruct` ran on `NPU`
   - `whisper-large-v3-turbo` ran on `NPU`
+- The current maintained OpenVINO export path is also version-constrained:
+  - on this machine it is `optimum-intel 1.27.0` with `transformers 4.57.6`
+  - that matters because newer upstream architectures can fail at export time even when OpenVINO Runtime itself is fine
 
 For the exact export status, exact failure modes, and current GPU/NPU timings, use [03-openvino/README.md](/home/lhl/github/lhl/intel-inference/03-openvino/README.md).
 

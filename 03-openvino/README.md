@@ -81,6 +81,28 @@ Current validated export targets on the maintained `optimum-intel 1.27.0` + `tra
 
 Those two blocked models remain important research targets for later phases, but they are not part of the default runnable `03-openvino` baseline because the current maintained Optimum stack does not export them cleanly.
 
+## Important version-skew caveat
+
+This needs to be called out explicitly:
+
+- the current Intel/OpenVINO export story is not just "install the latest Transformers and go"
+- on this machine, the maintained export path is `optimum-intel 1.27.0` with `transformers 4.57.6`
+- that is not an arbitrary local pin; it is the top end of the currently supported `optimum-intel` dependency window
+- the practical consequence is that OpenVINO runtime support and OpenVINO export support are different questions
+
+In other words:
+
+- once a model is already exported to OpenVINO IR, OpenVINO Runtime and OpenVINO GenAI do not need to track the newest Hugging Face `transformers` release
+- but exporting a new Hugging Face checkpoint into a working OpenVINO IR artifact does depend on the `optimum-intel` plus `transformers` compatibility window
+- when that window lags upstream model releases, Intel support effectively lags too, even if the runtime itself is healthy
+
+That is exactly what happened in this phase:
+
+- `qwen3_5` failed before runtime because the maintained `transformers 4.57.6` stack does not recognize it
+- `lfm2_moe` failed for the same reason
+
+So this repo should keep treating "requires a specific older Transformers range on the maintained Intel path" as a first-class limitation, not as a minor packaging detail.
+
 ## Current validated results
 
 The current first real model pass is from March 23, 2026 on the tracked Lunar Lake machine:
