@@ -126,6 +126,31 @@ Immediate read:
 - `LFM2.5` is close to `Llama-3.2` in BF16 prompt throughput and a bit faster in generation
 - `LFM2.5 Q4_K_XL` was the fastest generation case in this first pass
 
+### Plugged-in / TTY-only Vulkan rerun
+
+Rerun on March 24, 2026 under the intended higher-stability condition:
+
+- machine on AC power
+- plain TTY session instead of the normal desktop session
+- same command shape: `llama-bench`, default `r=5`, default `pp512/tg128`, `-fa 1`
+
+Updated Vulkan results:
+
+| Model | Prompt tok/s | Gen tok/s |
+| --- | ---: | ---: |
+| `Llama-3.2-1B-Instruct-BF16` | `1112.37` | `36.32` |
+| `Llama-3.2-1B-Instruct-Q4_K_XL` | `2062.64` | `48.47` |
+| `LFM2.5-1.2B-Instruct-BF16` | `1147.68` | `38.34` |
+| `LFM2.5-1.2B-Instruct-Q4_K_XL` | `2221.51` | `59.86` |
+
+Current read after the rerun:
+
+- the AC-power / TTY-only condition is materially better for the Vulkan backend on this Lunar Lake machine
+- the new Vulkan numbers are the better reference set for "best current local result" on this repo
+- the overall ordering did not change:
+  - Q4 still beats BF16 on both models
+  - `LFM2.5 Q4_K_XL` is still the fastest generation case
+
 Raw files:
 
 - `04-llama.cpp/results/bench-vulkan-fa1-r5-20260323T190254Z.jsonl`

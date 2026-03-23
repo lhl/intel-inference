@@ -52,6 +52,7 @@ One important packaging detail from live validation:
   - median generation speed: about `28.1 tok/s`
 - reproducibility caveat:
   - that initial Llama run succeeded, but an immediate rerun failed during the on-the-fly Optimum/OpenVINO export and IR load path
+  - an additional rerun under AC power and in a plain TTY session still did not produce a stable repeat result
   - treat this as a promising first result, not yet as a stable benchmark baseline
 - current model-family blockers on the maintained `vllm-openvino` stack:
   - `Qwen/Qwen3.5-0.8B`
@@ -74,6 +75,7 @@ Current read:
 - current Llama result:
   - `meta-llama/Llama-3.2-1B-Instruct` starts and serves requests on XPU, but the current run was not stable enough to treat as a clean benchmark result
   - with the shared three-prompt benchmark, `1/3` prompts completed and `2/3` returned HTTP `500`
+  - reruns under AC power and in a plain TTY session did not cleanly resolve that instability
 - current model-family findings:
   - `Qwen/Qwen3.5-0.8B`
     - gets past model recognition on the newer upstream stack
