@@ -114,6 +114,54 @@ def dtype_smoke_results() -> list[SmokeResult]:
     return results
 
 
+def compile_smoke_results() -> list[SmokeResult]:
+    results: list[SmokeResult] = []
+
+    try:
+        fn = torch.compile(lambda a, b: torch.matmul(a, b), backend="inductor")
+        a = torch.randn((128, 512), device="xpu", dtype=torch.float16)
+        b = torch.randn((512, 512), device="xpu", dtype=torch.float16)
+        out = fn(a, b)
+        synchronize()
+        results.append(SmokeResult("compile_smoke", "matmul_float16", "OK", str(tuple(out.shape))))
+    except Exception as exc:
+        results.append(SmokeResult("compile_smoke", "matmul_float16", "ERR", safe_detail(exc)))
+
+    if hasattr(torch, "_int_mm"):
+        try:
+            fn = torch.compile(lambda a, b: torch._int_mm(a, b), backend="inductor")
+            a = torch.randint(-128, 127, (128, 512), device="xpu", dtype=torch.int8)
+            b = torch.randint(-128, 127, (512, 512), device="xpu", dtype=torch.int8)
+            out = fn(a, b)
+            synchronize()
+            results.append(
+                SmokeResult(
+                    "compile_smoke",
+                    "int_mm_int8",
+                    "OK",
+                    f"shape={tuple(out.shape)} dtype={out.dtype}",
+                )
+            )
+        except Exception as exc:
+            results.append(SmokeResult("compile_smoke", "int_mm_int8", "ERR", safe_detail(exc)))
+
+    try:
+        fn = torch.compile(
+            lambda q, k, v: F.scaled_dot_product_attention(q, k, v, is_causal=True),
+            backend="inductor",
+        )
+        q = torch.randn((1, 4, 128, 64), device="xpu", dtype=torch.float16)
+        k = torch.randn((1, 4, 128, 64), device="xpu", dtype=torch.float16)
+        v = torch.randn((1, 4, 128, 64), device="xpu", dtype=torch.float16)
+        out = fn(q, k, v)
+        synchronize()
+        results.append(SmokeResult("compile_smoke", "sdpa_float16", "OK", str(tuple(out.shape))))
+    except Exception as exc:
+        results.append(SmokeResult("compile_smoke", "sdpa_float16", "ERR", safe_detail(exc)))
+
+    return results
+
+
 def backend_results() -> list[SmokeResult]:
     q = torch.randn((1, 4, 256, 64), device="xpu", dtype=torch.float16)
     k = torch.randn((1, 4, 256, 64), device="xpu", dtype=torch.float16)
@@ -214,7 +262,7 @@ def main() -> None:
         raise SystemExit("torch.xpu is not available")
 
     summary = device_summary()
-    results = dtype_smoke_results() + viability_results() + backend_results()
+    results = dtype_smoke_results() + compile_smoke_results() + viability_results() + backend_results()
 
     print("torch", summary["torch"])
     print("device", summary["device_name"])

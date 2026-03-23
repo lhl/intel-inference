@@ -38,8 +38,10 @@ done
 
 if [[ "$QUICK" -eq 1 ]]; then
     "${SCRIPT_DIR}/run-gemm-bench.sh" --quick --prefix "${TIMESTAMP}-gemm-quick"
-    "${SCRIPT_DIR}/run-attention-bench.sh" --quick --prefix "${TIMESTAMP}-attention-quick"
+    "${SCRIPT_DIR}/run-batched-gemm-bench.sh" --quick --prefix "${TIMESTAMP}-batched-gemm-quick"
+    "${SCRIPT_DIR}/run-attention-bench.sh" --quick --dtypes bfloat16 float16 --prefix "${TIMESTAMP}-attention-quick"
 else
     "${SCRIPT_DIR}/run-gemm-bench.sh" --prefix "${TIMESTAMP}-gemm"
+    "${SCRIPT_DIR}/run-batched-gemm-bench.sh" --prefix "${TIMESTAMP}-batched-gemm"
     "${SCRIPT_DIR}/run-attention-bench.sh" --prefix "${TIMESTAMP}-attention"
 fi

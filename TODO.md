@@ -122,6 +122,8 @@ This file tracks the docs-first research and validation work needed before the R
 - Define one minimal validation path per framework or backend.
 - Record warm-up expectations, likely first-run delays, and common failure modes.
 - Leave benchmarking as a later phase until setup reliability is clear.
+- Rerun benchmark and validation scripts both plugged in and unplugged to capture power-state effects.
+- Rerun benchmark and validation scripts both from a plain TTY and from the Niri desktop session to check compositor and session-level impact.
 - Include at least one representative standard LLM in the validation set.
 - Include at least one representative hybrid LLM architecture in the validation set.
 - Include at least one representative multimodal model in the validation set.

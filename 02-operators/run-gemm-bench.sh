@@ -10,6 +10,7 @@ ENV_NAME="intel-inf-torch-xpu"
 PREFIX="$(timestamp_utc)-gemm-bench"
 CASES=("1x4096x4096" "128x4096x4096" "512x4096x4096" "128x4096x11008" "128x11008x4096")
 DTYPES=(float32 bfloat16 float16 int8)
+VARIANTS=(eager compile)
 REPEATS=20
 WARMUPS=5
 QUICK=0
@@ -24,6 +25,7 @@ Options:
   --prefix NAME         Output file prefix inside 02-operators/results/
   --cases CASE...       GEMM cases in MxNxK format
   --dtypes NAME...      float32 | bfloat16 | float16 | int8
+  --variants NAME...    eager | compile
   --repeats N           Timed iterations per case (default: 20)
   --warmups N           Warmup iterations per case (default: 5)
   --quick               Use a lighter sweep
@@ -54,6 +56,14 @@ while [[ $# -gt 0 ]]; do
             DTYPES=()
             while [[ $# -gt 0 && "$1" != --* ]]; do
                 DTYPES+=("$1")
+                shift
+            done
+            ;;
+        --variants)
+            shift
+            VARIANTS=()
+            while [[ $# -gt 0 && "$1" != --* ]]; do
+                VARIANTS+=("$1")
                 shift
             done
             ;;
@@ -92,6 +102,7 @@ JSON_OUT="${RESULTS_DIR}/${PREFIX}.json"
 run_in_env "$ENV_NAME" python "${SCRIPT_DIR}/gemm-bench.py" \
     --cases "${CASES[@]}" \
     --dtypes "${DTYPES[@]}" \
+    --variants "${VARIANTS[@]}" \
     --repeats "$REPEATS" \
     --warmups "$WARMUPS" \
     --json-out "$JSON_OUT" | tee "$LOGFILE"
