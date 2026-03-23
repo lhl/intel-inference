@@ -50,6 +50,23 @@ For now:
 
 That means this directory is currently the operator bridge between `01-hardware` and later full-runtime/model benchmarking, not the final framework-comparison layer.
 
+## Benchmark environments
+
+This phase currently uses one benchmark env consistently:
+
+- `run-backend-check.sh`
+  - `intel-inf-torch-xpu`
+- `run-gemm-bench.sh`
+  - `intel-inf-torch-xpu`
+- `run-batched-gemm-bench.sh`
+  - `intel-inf-torch-xpu`
+- `run-attention-bench.sh`
+  - `intel-inf-torch-xpu`
+- `run-suite.sh`
+  - `intel-inf-torch-xpu`
+
+If a later operator pass uses OpenVINO or another stack directly, this README should split the env mapping by script rather than treating `02-operators` as a single-env phase.
+
 ## Current quick-pass results
 
 The current initial validation run is from `./02-operators/run-suite.sh --quick` on the tracked Lunar Lake machine:

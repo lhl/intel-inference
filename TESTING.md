@@ -65,7 +65,7 @@ Planned numbered layout:
 00-setup/
 01-hardware/
 02-operators/
-03-runtime/
+03-openvino/
 04-llama.cpp/
 05-models/
 99-results/
@@ -84,8 +84,8 @@ Phase meanings:
   - GEMM
   - attention / SDPA
   - dtype and quant-path checks
-- `03-runtime/`
-  - PyTorch, OpenVINO, OpenVINO GenAI, and serving-runtime comparisons
+- `03-openvino/`
+  - OpenVINO, OpenVINO GenAI, and Optimum Intel env and runtime comparisons
 - `04-llama.cpp/`
   - backend-specific sweep automation
   - context-depth and quant testing
@@ -94,7 +94,13 @@ Phase meanings:
 - `99-results/`
   - summarized machine-readable outputs and final tables
 
-For now, the first two directories to populate are `00-setup/` and `01-hardware/`.
+For now, `00-setup/`, `01-hardware/`, `02-operators/`, and `03-openvino/` are the early concrete phases.
+
+Each phase README should state the exact benchmark environment used by each script:
+
+- no env when a benchmark is purely a system tool
+- exact `mamba` or `conda` env name when Python or framework code is involved
+- required sourced helpers such as `./00-setup/oneapi-env.sh` or `./00-setup/npu-env.sh`
 
 ## Canonical comparison artifacts
 
@@ -370,6 +376,12 @@ The first practical `02-operators` implementation should be:
 - [run-gemm-bench.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-gemm-bench.sh)
 - [run-batched-gemm-bench.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-batched-gemm-bench.sh)
 - [run-attention-bench.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-attention-bench.sh)
+
+The first practical `03-openvino` implementation is now:
+
+- [run-env-checks.sh](/home/lhl/github/lhl/intel-inference/03-openvino/run-env-checks.sh)
+- [run-device-bench.sh](/home/lhl/github/lhl/intel-inference/03-openvino/run-device-bench.sh)
+- [run-suite.sh](/home/lhl/github/lhl/intel-inference/03-openvino/run-suite.sh)
 
 ### OpenVINO
 

@@ -9,6 +9,10 @@ reference/llama.cpp-*/
 !01-hardware/results/README.md
 02-operators/results/*
 !02-operators/results/README.md
+03-openvino/results/*
+!03-openvino/results/README.md
+04-llama.cpp/results/*
+!04-llama.cpp/results/README.md
 
 # Ignore Python bytecode caches from local validation runs.
 __pycache__/

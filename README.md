@@ -99,11 +99,16 @@ Current docs:
 - [`TODO.md`](TODO.md): research backlog and documentation checklist
 - [`00-setup/`](00-setup/): numbered bring-up area for drivers, oneAPI, envs, and smoke tests
 - [`01-hardware/`](01-hardware/): numbered low-level benchmark area for bandwidth, compute, and telemetry work
+- [`02-operators/`](02-operators/): PyTorch XPU operator bring-up, GEMM, and SDPA benchmarking
+- [`03-openvino/`](03-openvino/): OpenVINO, OpenVINO GenAI, and Optimum env/device validation plus synthetic runtime checks
 
 Repository layout:
 
 - [`00-setup/`](00-setup/): system bring-up, driver/toolchain verification, and per-stack env validation
 - [`01-hardware/`](01-hardware/): raw memory-bandwidth, compute, and telemetry characterization
+- [`02-operators/`](02-operators/): operator-level PyTorch XPU benchmark layer
+- [`03-openvino/`](03-openvino/): OpenVINO-family runtime validation and device microbenchmarks
+- [`04-llama.cpp/`](04-llama.cpp/): planned backend-specific `llama.cpp` sweep layer
 - [`llama.cpp/`](llama.cpp/): pinned upstream submodule used for llama.cpp backend experiments
 - [`reference/`](reference/): tracked source material plus pinned upstream reference submodules
 
@@ -123,7 +128,10 @@ Current recommendation order for new testing work:
 
 1. Finish `00-setup/` first so the driver, oneAPI, env, and smoke-test story is recorded.
 2. Finish `01-hardware/` next so we have raw bandwidth and compute baselines before runtime conclusions.
-3. Then move into runtime and model-level comparisons, starting with OpenVINO, OpenVINO GenAI, PyTorch XPU, and `llama.cpp`.
-4. Only after that spend time on `vLLM`, `vllm-openvino`, and SGLang.
+3. Use `02-operators/` to establish what PyTorch XPU kernels and SDPA paths actually exist on the current machine.
+4. Then move into `03-openvino/` and `04-llama.cpp/` for runtime and backend-level comparisons.
+5. Only after that start broader model-family and serving-stack work.
+6. Every benchmark phase should state the exact env or system-tool context used by each script.
+7. Only after that spend time on `vLLM`, `vllm-openvino`, and SGLang.
 
 The next major step is to turn the docs-derived guidance into validated setup notes, model coverage findings, and real benchmark results.

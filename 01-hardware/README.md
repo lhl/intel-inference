@@ -66,6 +66,26 @@ That means this directory is a real benchmark layer now, but still not the final
 
 not as exhaustive architectural limits
 
+## Benchmark environments
+
+This phase intentionally mixes system tools and pinned Python envs. The benchmark README should always state which is which.
+
+- `run-host-mbw.sh`
+  - no `mamba` env
+  - uses system tools such as `mbw` and `sysbench`
+- `run-xpu-bandwidth.sh`
+  - `intel-inf-torch-xpu`
+- `run-mamf-finder.sh`
+  - `intel-inf-torch-xpu`
+- `run-npu-microbench.sh`
+  - `intel-inf-openvino`
+  - requires `source ./00-setup/npu-env.sh` on this Arch machine so OpenVINO can enumerate `NPU`
+- `collect-intel-gpu-top.sh`
+  - no `mamba` env
+  - uses the system `intel_gpu_top` tool
+- `run-suite.sh`
+  - mixes the above and should be read as a multi-env wrapper, not one single-env benchmark
+
 ## Current measured results
 
 The current fuller host and GPU pass is from `./01-hardware/run-suite.sh` on the tracked Lunar Lake machine:
