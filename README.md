@@ -99,13 +99,16 @@ Current machine read:
 - upstream `vLLM` XPU
   - uses a newer local source build and can recognize more model families than `vllm-openvino`
   - `Llama-3.2-1B-Instruct` starts and serves, but the first shared benchmark run was unstable and returned `500` errors on `2/3` prompts
+  - a later XPU tuning pass showed that this is not just a bad `gpu_memory_utilization` default:
+    - the runtime does see the full shared-memory XPU budget on this machine
+    - the first profile that cleanly reached `/health` still failed on first generation in the XPU Flash Attention kernel with `Only XE2 cutlass kernel is supported currently`
   - `LFM2-1.2B` reaches engine init, then fails on an internal KV-cache assertion
   - `Qwen3.5-0.8B` reaches engine init on the newer stack, then fails in the XPU multimodal attention path
 
 That means the current recommendation for this repo is:
 
 - treat `vllm-openvino` as the current best initial Intel `vLLM` result for simple Llama-class GPU serving, but not yet as a stable baseline
-- treat upstream `vLLM` XPU as promising but still exploratory on this hardware
+- treat upstream `vLLM` XPU as promising but still exploratory on this hardware, with both startup-memory fragility and current XPU attention-kernel limitations
 
 For the exact env split, scripts, and failure details, use [05-vllm/README.md](/home/lhl/github/lhl/intel-inference/05-vllm/README.md).
 
@@ -222,5 +225,59 @@ Current recommendation order for new testing work:
 6. Only after that start broader model-family work.
 7. Every benchmark phase should state the exact env or system-tool context used by each script.
 8. Only after that spend time on SGLang and wider serving-stack comparisons.
+
+## Benchmark Run Contract
+
+This section is the default behavior for future "run benchmarks" or "rerun phase X" requests in this repo.
+
+Unless explicitly overridden:
+
+- always use the current machine/session state as-is
+  - if the machine is on AC power, treat that as the active benchmark condition
+  - if the machine is in a plain TTY or in a WM/desktop session, treat that as the active benchmark condition
+- always say exactly what was run and exactly what was not run
+- always treat failures, unsupported models, and build blockers as benchmark results, not as reasons to silently stop the phase
+- always leave raw logs under ignored `results/` directories
+- only summarize tracked results from the actual runs that completed in the current pass
+
+Default phase meanings:
+
+- "run `01-hardware`"
+  - run [01-hardware/run-suite.sh](/home/lhl/github/lhl/intel-inference/01-hardware/run-suite.sh)
+  - use `--quick` unless a full sweep is explicitly requested
+- "run `02-operators`"
+  - run [02-operators/run-suite.sh](/home/lhl/github/lhl/intel-inference/02-operators/run-suite.sh)
+  - use `--quick` unless a full sweep is explicitly requested
+- "run `03-openvino`"
+  - run [03-openvino/run-suite.sh](/home/lhl/github/lhl/intel-inference/03-openvino/run-suite.sh) with `--with-models --device GPU`
+  - then run explicit blocked-model export checks for:
+    - `qwen35_0p8b`
+    - `lfm2_8b_a1b`
+  - if an `NPU` rerun is desired, that should be requested explicitly
+- "run `04-llama.cpp`"
+  - rerun the currently usable backend benchmarks, which today means the Vulkan small-GGUF bench set
+  - keep `SYCL` and `OpenVINO` failures or build blockers as reported results if they are still blocked
+- "run `05-vllm`"
+  - run [05-vllm/run-env-checks.sh](/home/lhl/github/lhl/intel-inference/05-vllm/run-env-checks.sh)
+  - do not rely on [05-vllm/run-suite.sh](/home/lhl/github/lhl/intel-inference/05-vllm/run-suite.sh) alone when it would stop on the first backend/model failure
+  - instead run targeted per-backend, per-model checks so supported and unsupported cases are both captured:
+    - upstream `vLLM` XPU:
+      - `llama32_1b_instruct`
+      - `qwen35_0p8b`
+      - `lfm2_1p2b`
+    - `vllm-openvino`:
+      - `llama32_1b_instruct`
+      - `qwen35_0p8b`
+      - `lfm2_1p2b`
+  - for XPU, start from the repo's low-memory defaults rather than CUDA-style assumptions
+
+Default reporting rules:
+
+- if a phase was only partially rerun, say that explicitly
+- if a number improved, say whether the comparison is against:
+  - desktop vs TTY
+  - battery vs AC
+  - or some other changed condition
+- if a doc is updated from a rerun, only claim the new condition that was actually exercised
 
 The next major step is to turn the docs-derived guidance into validated setup notes, model coverage findings, and real benchmark results.

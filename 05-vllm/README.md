@@ -71,9 +71,25 @@ Current read:
   - env imports cleanly
   - `torch.xpu` is available
   - `vllm` reports `XPUPlatform`
+- memory-accounting baseline:
+  - upstream XPU is not simply failing to see unified memory on this Lunar Lake machine
+  - `torch.xpu.mem_get_info()` and the `vLLM` startup logs both report about `28.49 GiB` total XPU-visible memory
+  - the practical issue is the runtime's startup and KV-cache budgeting behavior on a shared-memory iGPU, not a trivial "GTT is invisible" bug
 - current Llama result:
   - `meta-llama/Llama-3.2-1B-Instruct` starts and serves requests on XPU, but the current run was not stable enough to treat as a clean benchmark result
   - with the shared three-prompt benchmark, `1/3` prompts completed and `2/3` returned HTTP `500`
+- current XPU tuning result:
+  - the first broad tuning pass did not find a stable "just lower memory" profile
+  - explicit `kv_cache_memory_bytes` alone was not enough to produce a reliable boot path
+  - the one configuration that consistently got far enough to expose `/health` was:
+    - `--max-model-len 1024`
+    - `--gpu-memory-utilization 0.20`
+    - `--enforce-eager`
+  - that profile then failed on the first real generation request with:
+    - `RuntimeError: Only XE2 cutlass kernel is supported currently.`
+  - practical read:
+    - startup memory pressure is one problem
+    - after easing that pressure, the next blocker is the current XPU Flash Attention kernel path
 - current model-family findings:
   - `Qwen/Qwen3.5-0.8B`
     - gets past model recognition on the newer upstream stack
@@ -86,7 +102,12 @@ Current read:
 
 - upstream XPU is newer and clearly broader than `vllm-openvino` at the model-registration layer
 - that broader coverage does not yet translate into a stable small-model baseline on this machine
-- on this Lunar Lake iGPU, `gpu_memory_utilization` needed to be lowered well below typical defaults; `0.10` to `0.15` is a more realistic starting range here than `0.6`
+- on this Lunar Lake iGPU, the default `gpu_memory_utilization` assumptions are too aggressive
+- however, lowering `gpu_memory_utilization` alone is not enough
+- the current XPU story is:
+  - shared-memory startup budgeting is fragile
+  - the first bootable text-only Llama profile still dies in the Flash Attention kernel on generation
+- treat the XPU path here as exploratory rather than benchmark-ready
 
 ## Comparison rules
 
@@ -112,7 +133,14 @@ Serving and benchmarking:
 
 ## Recommended next work
 
-- rerun the upstream XPU Llama path with a tighter, explicit low-memory profile and a manual request sanity pass before trusting benchmark numbers
+- rerun the upstream XPU Llama path in a cleaner session with the exact low-memory profile that got furthest here:
+  - `--max-model-len 1024`
+  - `--gpu-memory-utilization 0.20`
+  - `--enforce-eager`
+- rerun the same path with:
+  - `--kv-cache-memory-bytes 1073741824`
+  - `--attention-backend TRITON_ATTN`
+- treat those reruns as diagnostic checks, not as production tuning guidance yet
 - test whether any text-only Qwen 3.5 checkpoint avoids the current multimodal XPU kernel failure
 - test `vllm-openvino` on exported or older checkpoint families that fit its current `transformers 4.51` line
 - only after the basic serve path is stable, start quantization and feature sweeps
