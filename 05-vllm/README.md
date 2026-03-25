@@ -194,10 +194,10 @@ This repo now also tracks Intel's downstream `llm-scaler` stack locally:
     - `intel_extension_for_pytorch 2.10.10.post1+xpu`
     - `arctic_inference 0.1.1`
     - patched downstream `vllm 0.14.1.dev0+gb17039bcc.d20260325.xpu`
-  - the first real serve attempt still failed immediately with:
+  - the first real serve attempt initially failed immediately with:
     - `ModuleNotFoundError: No module named 'vllm_xpu_kernels'`
   - that failure matches Intel's Dockerfile, which installs `vllm-xpu-kernels` separately in a later stage
-  - a manual `vllm-xpu-kernels` build at commit `4c83144` then ran deep into the native `oneDNN` SYCL build before failing during later XPU kernel targets
+  - a manual `vllm-xpu-kernels` build at commit `4c83144` first failed under local oneAPI `2025.0.4` during later XPU kernel targets
   - the concrete build errors on this host were:
     - missing `sycl::ext::oneapi::experimental::info::kernel_queue_specific::max_num_work_groups`
     - missing `sycl::ext::oneapi::experimental::work_group_scratch_size`
@@ -206,15 +206,41 @@ This repo now also tracks Intel's downstream `llm-scaler` stack locally:
     - active host compiler: `Intel(R) oneAPI DPC++/C++ Compiler 2025.0.4`
     - `vllm-xpu-kernels` README says: `Currently we use PyTorch 2.10, oneapi 2025.3.`
     - current Intel downstream `reference/llm-scaler/vllm/docker/Dockerfile` installs `intel-oneapi-dpcpp-ct=2025.2.0-517`
-  - current repo read from that failure:
-    - this host-side blocker is best explained as a oneAPI compiler or SYCL API mismatch, not as a generic `vllm-xpu-kernels` source failure
+  - a side-by-side user install of oneAPI `2025.3.2` under `/home/lhl/opt/intel/oneapi-2025.3` removed that earlier compiler mismatch
+  - the retried native build then got much further:
+    - it cleared the old XE2 grouped-GEMM and `chunk_prefill` compile failures
+    - it progressed through generated XE2 attention targets for head sizes `128`, `192`, and into `256`
+    - but it remained a long native build and was no longer the fastest path to a runnable host stack
+  - the practical host-side path turned out to be the published wheel:
+    - `vllm-xpu-kernels 0.1.3.1`
+    - wheel tag: `cp38-abi3-manylinux_2_28_x86_64`
+  - with that wheel installed, downstream `vllm` on this machine reached three distinct states:
+    - low-memory configs such as `--gpu-memory-utilization 0.05` or `0.10` still failed during KV-cache planning with `ValueError: No available memory for the cache blocks`
+    - an overly aggressive config (`--gpu-memory-utilization 1.0`, `--max-model-len 256`) got past cache planning but hit `UR_RESULT_ERROR_DEVICE_LOST` during KV-cache tensor allocation
+    - a middle config worked:
+      - `--max-model-len 256`
+      - `--gpu-memory-utilization 0.20`
+      - `--block-size 64`
+      - `--enforce-eager`
+    - that successful config served `meta-llama/Llama-3.2-1B-Instruct` and completed a 3/3 short benchmark run with summary at:
+      - [20260326T0648Z-llmscaler-wheel-xpu-llama32-shortbench-summary.json](/home/lhl/github/lhl/intel-inference/05-vllm/results/20260326T0648Z-llmscaler-wheel-xpu-llama32-shortbench-summary.json)
+      - median total latency about `1215.6 ms`
+      - median TTFT about `55.7 ms`
+      - median generation speed about `27.6 tok/s`
+  - one important failure mode from the same downstream stack:
+    - `--block-size 16` is not viable here once requests actually run
+    - the request-time failure was: `XeTLA ChunkPrefill FP8KV: only support block_size >= 64`
 
 Current read:
 
-- `llm-scaler` is not a dead end on this machine, but it is not a one-command host bring-up either
-- the downstream Python and patched `vllm` layers can be installed locally
-- the remaining blocker is the separate `vllm-xpu-kernels` native build under a newer oneAPI compiler line than this host currently has
-- until the compiler line is aligned and that kernel package builds successfully, treat `llm-scaler` here as `partial bring-up`, not `working`
+- `llm-scaler` is not a documented `Arc 140V` target, but there is now one verified local text-serving path on this machine
+- the fastest practical host-side path is not the full native kernel build; it is the downstream Python stack plus the published `vllm-xpu-kernels` wheel
+- the working envelope is narrower than upstream `vLLM` XPU:
+  - smaller context (`--max-model-len 256`)
+  - `--gpu-memory-utilization 0.20`
+  - `--block-size 64`
+  - `--enforce-eager`
+- treat this as `works with workaround`, not as a clean or documented downstream support story for Lunar Lake or Arc `140V`
 
 ## Comparison rules
 
@@ -247,10 +273,12 @@ Serving and benchmarking:
   - `--block-size 64`
   - `--attention-backend TRITON_ATTN`
   - `--enforce-eager`
+- rerun the downstream `llm-scaler` wheel-backed Llama path with a cleaner desktop session and higher context targets to see whether the working window extends beyond `--max-model-len 256`
+- test whether downstream `llm-scaler` can avoid the current request-time `XeTLA ChunkPrefill FP8KV: only support block_size >= 64` limitation in any smaller-block profile, or whether `64` is the practical minimum on this path
 - rerun the same profile in a cleaner session with fewer desktop GPU clients to see whether `0.08` is still a stable target when the device is less busy
 - test whether any text-only Qwen 3.5 checkpoint avoids the current multimodal XPU kernel failure
 - inspect whether the `Qwen3.5` multimodal encoder can be forced away from the current XPU `FLASH_ATTN` path, because `TRITON_ATTN` on the main model path alone is not enough
-- align the host oneAPI compiler with the downstream stack expectation (`2025.2.x` or newer, with the kernel repo itself now saying `2025.3`), then rerun the `vllm-xpu-kernels` build and retry the same small Llama serve path
+- if a source-built downstream stack is still desired, continue the now-unblocked oneAPI `2025.3` native `vllm-xpu-kernels` build rather than assuming the old `2025.0.4` compiler failure is still the active blocker
 - test `vllm-openvino` on exported or older checkpoint families that fit its current `transformers 4.51` line
 - only after the basic serve path is stable, start quantization and feature sweeps
 

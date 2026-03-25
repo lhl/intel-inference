@@ -68,7 +68,7 @@ TTY is consistently ~15–20% faster than a desktop session, likely due to reduc
 
 | Stack | Status | Detail |
 |-------|--------|--------|
-| llm-scaler host-side reconstruction | Partial bring-up | Patched downstream `vllm` and `arctic_inference` install locally, but host-side `vllm-xpu-kernels` build fails under local `icpx 2025.0.4`; the kernel repo expects newer oneAPI and Intel's current downstream Dockerfile installs `intel-oneapi-dpcpp-ct=2025.2.0-517` |
+| llm-scaler host-side reconstruction | Works with workaround | User-space oneAPI `2025.3` plus the published `vllm-xpu-kernels 0.1.3.1` wheel let patched downstream `vllm 0.14.1.xpu` serve `Llama-3.2-1B-Instruct` on this Arc `140V` machine with narrow tuning: `--max-model-len 256 --gpu-memory-utilization 0.20 --block-size 64 --enforce-eager`; 3/3 prompt benchmark run gave median TTFT about `55.7 ms`, median total latency about `1215.6 ms`, median gen throughput about `27.6 tok/s` |
 
 ### llama.cpp — other backends
 
@@ -131,7 +131,7 @@ OVERRIDEABLE is the backend that matters for Intel client-GPU attention. Flash A
 - **Upstream vLLM XPU** is still exploratory, but a small Llama text-serving path now works on this machine with `TRITON_ATTN` and aggressive low-memory tuning
 - **Upstream Xe2 multimodal coverage** is still incomplete; both local testing and an open upstream Arc `140V` issue hit `Only XE2 cutlass kernel is supported currently`
 - **PyTorch XPU** has a real upstream path but still needs model-family and quantization validation
-- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, and the local host-side bring-up is currently blocked by an older host oneAPI compiler line (`icpx 2025.0.4` versus newer downstream expectations)
+- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, but the local host-side experiment now has one verified Arc `140V` path via user-space oneAPI `2025.3` and the published `vllm-xpu-kernels` wheel
 - **IPEX-LLM** is archived and should not be treated as a default path
 - **NPU** works for Whisper (actually faster than GPU for whisper-large-v3-turbo) and basic LLM inference, but throughput is much lower than GPU
 
