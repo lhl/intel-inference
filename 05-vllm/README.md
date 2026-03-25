@@ -197,14 +197,24 @@ This repo now also tracks Intel's downstream `llm-scaler` stack locally:
   - the first real serve attempt still failed immediately with:
     - `ModuleNotFoundError: No module named 'vllm_xpu_kernels'`
   - that failure matches Intel's Dockerfile, which installs `vllm-xpu-kernels` separately in a later stage
-  - a manual `vllm-xpu-kernels` build at commit `4c83144` did start successfully with oneAPI compilers and progressed into a long `oneDNN` SYCL compile, but it was not completed within this experiment window
+  - a manual `vllm-xpu-kernels` build at commit `4c83144` then ran deep into the native `oneDNN` SYCL build before failing during later XPU kernel targets
+  - the concrete build errors on this host were:
+    - missing `sycl::ext::oneapi::experimental::info::kernel_queue_specific::max_num_work_groups`
+    - missing `sycl::ext::oneapi::experimental::work_group_scratch_size`
+    - missing `sycl::ext::oneapi::experimental::architecture::intel_gpu_bmg_g31`
+  - local compiler state:
+    - active host compiler: `Intel(R) oneAPI DPC++/C++ Compiler 2025.0.4`
+    - `vllm-xpu-kernels` README says: `Currently we use PyTorch 2.10, oneapi 2025.3.`
+    - current Intel downstream `reference/llm-scaler/vllm/docker/Dockerfile` installs `intel-oneapi-dpcpp-ct=2025.2.0-517`
+  - current repo read from that failure:
+    - this host-side blocker is best explained as a oneAPI compiler or SYCL API mismatch, not as a generic `vllm-xpu-kernels` source failure
 
 Current read:
 
 - `llm-scaler` is not a dead end on this machine, but it is not a one-command host bring-up either
 - the downstream Python and patched `vllm` layers can be installed locally
-- the missing and expensive step is the separate `vllm-xpu-kernels` native build
-- until that kernel package finishes and a serve retry succeeds, treat `llm-scaler` here as `partial bring-up`, not `working`
+- the remaining blocker is the separate `vllm-xpu-kernels` native build under a newer oneAPI compiler line than this host currently has
+- until the compiler line is aligned and that kernel package builds successfully, treat `llm-scaler` here as `partial bring-up`, not `working`
 
 ## Comparison rules
 
@@ -240,7 +250,7 @@ Serving and benchmarking:
 - rerun the same profile in a cleaner session with fewer desktop GPU clients to see whether `0.08` is still a stable target when the device is less busy
 - test whether any text-only Qwen 3.5 checkpoint avoids the current multimodal XPU kernel failure
 - inspect whether the `Qwen3.5` multimodal encoder can be forced away from the current XPU `FLASH_ATTN` path, because `TRITON_ATTN` on the main model path alone is not enough
-- continue the separate `llm-scaler` bring-up by finishing the `vllm-xpu-kernels` build and then retrying the same small Llama serve path
+- align the host oneAPI compiler with the downstream stack expectation (`2025.2.x` or newer, with the kernel repo itself now saying `2025.3`), then rerun the `vllm-xpu-kernels` build and retry the same small Llama serve path
 - test `vllm-openvino` on exported or older checkpoint families that fit its current `transformers 4.51` line
 - only after the basic serve path is stable, start quantization and feature sweeps
 

@@ -68,7 +68,7 @@ TTY is consistently ~15–20% faster than a desktop session, likely due to reduc
 
 | Stack | Status | Detail |
 |-------|--------|--------|
-| llm-scaler host-side reconstruction | Partial bring-up | Patched downstream `vllm` and `arctic_inference` install locally, but serving still blocks on separately building and installing `vllm-xpu-kernels` |
+| llm-scaler host-side reconstruction | Partial bring-up | Patched downstream `vllm` and `arctic_inference` install locally, but host-side `vllm-xpu-kernels` build fails under local `icpx 2025.0.4`; the kernel repo expects newer oneAPI and Intel's current downstream Dockerfile installs `intel-oneapi-dpcpp-ct=2025.2.0-517` |
 
 ### llama.cpp — other backends
 
@@ -131,7 +131,7 @@ OVERRIDEABLE is the backend that matters for Intel client-GPU attention. Flash A
 - **Upstream vLLM XPU** is still exploratory, but a small Llama text-serving path now works on this machine with `TRITON_ATTN` and aggressive low-memory tuning
 - **Upstream Xe2 multimodal coverage** is still incomplete; both local testing and an open upstream Arc `140V` issue hit `Only XE2 cutlass kernel is supported currently`
 - **PyTorch XPU** has a real upstream path but still needs model-family and quantization validation
-- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, and the local host-side bring-up is only partial so far
+- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, and the local host-side bring-up is currently blocked by an older host oneAPI compiler line (`icpx 2025.0.4` versus newer downstream expectations)
 - **IPEX-LLM** is archived and should not be treated as a default path
 - **NPU** works for Whisper (actually faster than GPU for whisper-large-v3-turbo) and basic LLM inference, but throughput is much lower than GPU
 
