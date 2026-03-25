@@ -70,6 +70,13 @@ TTY is consistently ~15–20% faster than a desktop session, likely due to reduc
 |-------|--------|--------|
 | llm-scaler host-side reconstruction | Works with workaround | User-space oneAPI `2025.3` plus the published `vllm-xpu-kernels 0.1.3.1` wheel let patched downstream `vllm 0.14.1.xpu` serve `Llama-3.2-1B-Instruct` on this Arc `140V` machine with narrow tuning: `--max-model-len 256 --gpu-memory-utilization 0.20 --block-size 64 --enforce-eager`; 3/3 prompt benchmark run gave median TTFT about `55.7 ms`, median total latency about `1215.6 ms`, median gen throughput about `27.6 tok/s` |
 
+llm-scaler notes:
+
+- **Version pinning**: as of March 11, 2026, Intel's latest documented beta is `intel/llm-scaler-vllm:0.14.0-b8.1`, while upstream `vLLM` on PyPI is already `0.18.0`. Treat `llm-scaler` as an older downstream branch with Intel backports, not as a mirror of current upstream `vLLM`.
+- **Documented model support**: Intel's public `llm-scaler` docs explicitly list broad `Qwen3` and `Qwen3.5` family support, including dense, MoE, VL, Omni, embedding, reranker, and quantized paths.
+- **Code-present but not docs-backed**: the patched downstream code installed locally also contains `lfm2`, `lfm2_moe`, and `lfm2_vl` model registrations, but `LFM2` is not listed in Intel's public `llm-scaler` support tables. Treat that as `present in patched code`, not as Intel-documented support.
+- **Current repo read**: for `llm-scaler`, `Qwen3.5` is docs-backed downstream support; `LFM2` is only code-level evidence here unless we validate it locally.
+
 ### llama.cpp — other backends
 
 | Backend | Build | Runtime | Notes |
@@ -131,7 +138,7 @@ OVERRIDEABLE is the backend that matters for Intel client-GPU attention. Flash A
 - **Upstream vLLM XPU** is still exploratory, but a small Llama text-serving path now works on this machine with `TRITON_ATTN` and aggressive low-memory tuning
 - **Upstream Xe2 multimodal coverage** is still incomplete; both local testing and an open upstream Arc `140V` issue hit `Only XE2 cutlass kernel is supported currently`
 - **PyTorch XPU** has a real upstream path but still needs model-family and quantization validation
-- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, but the local host-side experiment now has one verified Arc `140V` path via user-space oneAPI `2025.3` and the published `vllm-xpu-kernels` wheel
+- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, its branch is still pinned around patched `vLLM 0.14.x`, and the local host-side experiment now has one verified Arc `140V` path via user-space oneAPI `2025.3` and the published `vllm-xpu-kernels` wheel
 - **IPEX-LLM** is archived and should not be treated as a default path
 - **NPU** works for Whisper (actually faster than GPU for whisper-large-v3-turbo) and basic LLM inference, but throughput is much lower than GPU
 
