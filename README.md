@@ -60,9 +60,15 @@ TTY is consistently ~15–20% faster than a desktop session, likely due to reduc
 
 | Model | Status | Detail |
 |-------|--------|--------|
-| Llama-3.2-1B-Instruct | Unstable | Serves but 2/3 prompts returned HTTP 500; after tuning, hits `Only XE2 cutlass kernel is supported currently` in Flash Attention |
+| Llama-3.2-1B-Instruct | Works with tuning | `TRITON_ATTN` plus low-memory settings produced a clean 3/3 prompt benchmark run; median TTFT about 90 ms, median total latency about 2019 ms, median gen throughput about 29.9 tok/s |
 | LFM2-1.2B | Fails | Internal KV-cache page-size assertion after engine init |
-| Qwen3.5-0.8B | Fails | Crashes in XPU multimodal attention path with same XE2 cutlass error |
+| Qwen3.5-0.8B | Fails | Gets through recognition and weight loading, then crashes in XPU multimodal attention path with `Only XE2 cutlass kernel is supported currently` |
+
+### Intel downstream — llm-scaler
+
+| Stack | Status | Detail |
+|-------|--------|--------|
+| llm-scaler host-side reconstruction | Partial bring-up | Patched downstream `vllm` and `arctic_inference` install locally, but serving still blocks on separately building and installing `vllm-xpu-kernels` |
 
 ### llama.cpp — other backends
 
@@ -122,8 +128,10 @@ OVERRIDEABLE is the backend that matters for Intel client-GPU attention. Flash A
 - **OpenVINO GenAI** is a genuine first-class runtime, not just a thin wrapper — it ships its own performance tooling and supports GPU + NPU
 - **llama.cpp Vulkan** is the cleanest GPU inference path, with the highest token generation rates in our tests (up to ~60 tok/s Q4)
 - **vllm-openvino** produced a promising initial Llama result but is not yet stable across reruns
-- **Upstream vLLM XPU** is exploratory — memory pressure on shared-memory iGPUs and XE2 attention kernel gaps make it unreliable
+- **Upstream vLLM XPU** is still exploratory, but a small Llama text-serving path now works on this machine with `TRITON_ATTN` and aggressive low-memory tuning
+- **Upstream Xe2 multimodal coverage** is still incomplete; both local testing and an open upstream Arc `140V` issue hit `Only XE2 cutlass kernel is supported currently`
 - **PyTorch XPU** has a real upstream path but still needs model-family and quantization validation
+- **Intel llm-scaler** is now tracked as a downstream reference stack; its public docs remain B60-centric, and the local host-side bring-up is only partial so far
 - **IPEX-LLM** is archived and should not be treated as a default path
 - **NPU** works for Whisper (actually faster than GPU for whisper-large-v3-turbo) and basic LLM inference, but throughput is much lower than GPU
 

@@ -18,6 +18,11 @@ MAX_MODEL_LEN=2048
 PROMPT_FILE="${SCRIPT_DIR}/../benchmarks/prompts/small-llm-chat.jsonl"
 MODELS=()
 GPU_MEMORY_UTILIZATION=0.15
+KV_CACHE_MEMORY_BYTES=""
+BLOCK_SIZE=""
+ATTENTION_BACKEND=""
+ENFORCE_EAGER=0
+ZE_AFFINITY_MASK=""
 KV_CACHE_PRECISION="i8"
 KV_CACHE_SPACE="4"
 PREFIX="$(timestamp_utc)-openai-bench"
@@ -37,6 +42,11 @@ Options:
   --max-model-len N        Max model length for the runtime (default: 2048)
   --gpu-memory-utilization F
                            Runtime GPU memory utilization target (default: 0.15)
+  --kv-cache-memory-bytes N  XPU-only explicit KV cache budget in bytes
+  --block-size N             XPU-only explicit vLLM block size
+  --attention-backend NAME   XPU-only attention backend (e.g. TRITON_ATTN)
+  --enforce-eager            XPU-only eager mode
+  --ze-affinity-mask MASK    XPU-only ZE_AFFINITY_MASK override
   --kv-cache-precision N   OpenVINO KV cache precision (default: i8)
   --kv-cache-space GB      OpenVINO KV cache reservation in GB (default: 4)
   --prompt-file PATH       JSONL prompt file (default: benchmarks/prompts/small-llm-chat.jsonl)
@@ -78,6 +88,26 @@ while [[ $# -gt 0 ]]; do
             ;;
         --gpu-memory-utilization)
             GPU_MEMORY_UTILIZATION="$2"
+            shift 2
+            ;;
+        --kv-cache-memory-bytes)
+            KV_CACHE_MEMORY_BYTES="$2"
+            shift 2
+            ;;
+        --block-size)
+            BLOCK_SIZE="$2"
+            shift 2
+            ;;
+        --attention-backend)
+            ATTENTION_BACKEND="$2"
+            shift 2
+            ;;
+        --enforce-eager)
+            ENFORCE_EAGER=1
+            shift
+            ;;
+        --ze-affinity-mask)
+            ZE_AFFINITY_MASK="$2"
             shift 2
             ;;
         --kv-cache-precision)
@@ -133,6 +163,23 @@ current_port="$PORT"
 for alias in "${MODELS[@]}"; do
     [[ "$(resolve_model_family "$alias")" == "llm" ]] || die "model alias is not an llm: $alias"
 
+    xpu_extra_args=()
+    if [[ -n "$KV_CACHE_MEMORY_BYTES" ]]; then
+        xpu_extra_args+=(--kv-cache-memory-bytes "$KV_CACHE_MEMORY_BYTES")
+    fi
+    if [[ -n "$BLOCK_SIZE" ]]; then
+        xpu_extra_args+=(--block-size "$BLOCK_SIZE")
+    fi
+    if [[ -n "$ATTENTION_BACKEND" ]]; then
+        xpu_extra_args+=(--attention-backend "$ATTENTION_BACKEND")
+    fi
+    if [[ "$ENFORCE_EAGER" -eq 1 ]]; then
+        xpu_extra_args+=(--enforce-eager)
+    fi
+    if [[ -n "$ZE_AFFINITY_MASK" ]]; then
+        xpu_extra_args+=(--ze-affinity-mask "$ZE_AFFINITY_MASK")
+    fi
+
     server_log="${RESULTS_DIR}/${PREFIX}-${BACKEND}-${alias}-server.log"
     output_jsonl="${RESULTS_DIR}/${PREFIX}-${BACKEND}-${alias}.jsonl"
     summary_json="${RESULTS_DIR}/${PREFIX}-${BACKEND}-${alias}-summary.json"
@@ -145,7 +192,8 @@ for alias in "${MODELS[@]}"; do
                 --host "$HOST" \
                 --port "$current_port" \
                 --max-model-len "$MAX_MODEL_LEN" \
-                --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION"
+                --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
+                "${xpu_extra_args[@]}"
         ) >"$server_log" 2>&1 &
     else
         log "starting temporary vLLM OpenVINO server for ${alias} on ${HOST}:${current_port}"

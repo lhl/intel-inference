@@ -16,3 +16,6 @@
 [submodule "reference/openvino.genai"]
 	path = reference/openvino.genai
 	url = https://github.com/openvinotoolkit/openvino.genai
+[submodule "reference/llm-scaler"]
+	path = reference/llm-scaler
+	url = https://github.com/intel/llm-scaler

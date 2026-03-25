@@ -12,10 +12,13 @@ Tracked reference files:
 - [`pytorch-2-10torchao.html`](pytorch-2-10torchao.html)
 - [`reddit-localllama-llamacpp-compute-memory-bandwidth-efficiency.md`](reddit-localllama-llamacpp-compute-memory-bandwidth-efficiency.md)
 - [`reddit-localllama-testing-llamacpp-intel-xe2-igpu-core-ultra.md`](reddit-localllama-testing-llamacpp-intel-xe2-igpu-core-ultra.md)
+- [`vllm-issue-35638-xpu-support-comment-2026-03-03.md`](vllm-issue-35638-xpu-support-comment-2026-03-03.md)
+- [`vllm-issue-37828-arc-140v-xe2-cutlass-2026-03-22.md`](vllm-issue-37828-arc-140v-xe2-cutlass-2026-03-22.md)
 
 Pinned upstream submodules in this directory:
 
 - `ipex-llm`
+- `llm-scaler`
 - `openvino`
 - `openvino.genai`
 - `optimum-intel`
@@ -30,6 +33,7 @@ Ignored local working directories:
 Notes:
 
 - The main `llama.cpp` upstream checkout is tracked separately as a root-level submodule.
+- `llm-scaler` is a downstream Intel repo rather than an upstream runtime repo, but it belongs here because it is now part of the repo's Intel-serving reference set and current `vLLM` research context.
 - `whisper.cpp` is tracked here as the speech-side sibling to `llama.cpp`, and it includes its own OpenVINO-backed Intel path.
 - `openvino.genai` is tracked separately from the main OpenVINO repo because it gives us the maintained Whisper and SpeechT5 pipeline layer we care about for ASR and TTS.
 - `openvino.genai` also includes `tools/llm_bench` and `tools/who_what_benchmark`, which are likely to become part of this repo's default Intel benchmarking and regression workflow.

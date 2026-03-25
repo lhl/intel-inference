@@ -17,6 +17,11 @@ SERVED_MODEL_NAME=""
 DTYPE="bfloat16"
 MAX_MODEL_LEN=2048
 GPU_MEMORY_UTILIZATION=0.15
+KV_CACHE_MEMORY_BYTES=""
+BLOCK_SIZE=""
+ATTENTION_BACKEND=""
+ENFORCE_EAGER=0
+ZE_AFFINITY_MASK=""
 ENABLE_TRUST_REMOTE_CODE=""
 
 usage() {
@@ -33,8 +38,13 @@ Options:
   --served-model-name NAME   Name to report from /v1/models
   --dtype NAME               vLLM dtype (default: bfloat16)
   --max-model-len N          Max model length (default: 2048)
-  --gpu-memory-utilization F GPU memory utilization target (default: 0.60)
+  --gpu-memory-utilization F GPU memory utilization target (default: 0.15)
                            Use a low default on shared-memory iGPU systems.
+  --kv-cache-memory-bytes N  Explicit KV cache budget in bytes
+  --block-size N             Explicit vLLM block size
+  --attention-backend NAME   Explicit attention backend (e.g. TRITON_ATTN)
+  --enforce-eager            Force eager mode
+  --ze-affinity-mask MASK    Set ZE_AFFINITY_MASK for device selection
   --trust-remote-code        Force enable trust_remote_code
   --no-trust-remote-code     Force disable trust_remote_code
   -h, --help                 Show this help text
@@ -77,6 +87,26 @@ while [[ $# -gt 0 ]]; do
             ;;
         --gpu-memory-utilization)
             GPU_MEMORY_UTILIZATION="$2"
+            shift 2
+            ;;
+        --kv-cache-memory-bytes)
+            KV_CACHE_MEMORY_BYTES="$2"
+            shift 2
+            ;;
+        --block-size)
+            BLOCK_SIZE="$2"
+            shift 2
+            ;;
+        --attention-backend)
+            ATTENTION_BACKEND="$2"
+            shift 2
+            ;;
+        --enforce-eager)
+            ENFORCE_EAGER=1
+            shift
+            ;;
+        --ze-affinity-mask)
+            ZE_AFFINITY_MASK="$2"
             shift 2
             ;;
         --trust-remote-code)
@@ -135,10 +165,29 @@ extra_args=()
 if [[ "$TRUST_REMOTE_CODE" -eq 1 ]]; then
     extra_args+=(--trust-remote-code)
 fi
+if [[ -n "$KV_CACHE_MEMORY_BYTES" ]]; then
+    extra_args+=(--kv-cache-memory-bytes "$KV_CACHE_MEMORY_BYTES")
+fi
+if [[ -n "$BLOCK_SIZE" ]]; then
+    extra_args+=(--block-size "$BLOCK_SIZE")
+fi
+if [[ -n "$ATTENTION_BACKEND" ]]; then
+    extra_args+=(--attention-backend "$ATTENTION_BACKEND")
+fi
+if [[ "$ENFORCE_EAGER" -eq 1 ]]; then
+    extra_args+=(--enforce-eager)
+fi
+
+env_args=(
+    VLLM_TARGET_DEVICE=xpu
+    VLLM_WORKER_MULTIPROC_METHOD=spawn
+)
+if [[ -n "$ZE_AFFINITY_MASK" ]]; then
+    env_args+=(ZE_AFFINITY_MASK="$ZE_AFFINITY_MASK")
+fi
 
 run_in_env "$ENV_NAME" env \
-    VLLM_TARGET_DEVICE=xpu \
-    VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    "${env_args[@]}" \
     vllm serve "$MODEL_DIR" \
         --host "$HOST" \
         --port "$PORT" \
