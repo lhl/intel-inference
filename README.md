@@ -68,14 +68,21 @@ TTY is consistently ~15–20% faster than a desktop session, likely due to reduc
 
 | Stack | Status | Detail |
 |-------|--------|--------|
-| llm-scaler host-side reconstruction | Works with workaround | User-space oneAPI `2025.3` plus the published `vllm-xpu-kernels 0.1.3.1` wheel let patched downstream `vllm 0.14.1.xpu` serve `Llama-3.2-1B-Instruct` on this Arc `140V` machine with narrow tuning: `--max-model-len 256 --gpu-memory-utilization 0.20 --block-size 64 --enforce-eager`; 3/3 prompt benchmark run gave median TTFT about `55.7 ms`, median total latency about `1215.6 ms`, median gen throughput about `27.6 tok/s` |
+| llm-scaler host-side reconstruction | Works with workaround for one model | User-space oneAPI `2025.3`, the published `vllm-xpu-kernels 0.1.3.1` wheel, `triton-xpu 3.6.0` without the generic `triton` wheel, and a Git `transformers` install let patched downstream `vllm 0.14.1.xpu` still serve `Llama-3.2-1B-Instruct` on this Arc `140V` machine with narrow tuning: `--max-model-len 256 --gpu-memory-utilization 0.20 --block-size 64 --enforce-eager`; a post-alignment 3/3 short benchmark rerun gave median TTFT about `69.7 ms`, median total latency about `2719.3 ms`, median gen throughput about `26.7 tok/s` |
+
+| Model | Status | Detail |
+|-------|--------|--------|
+| Llama-3.2-1B-Instruct | Benchmarkable | Verified local downstream path on Arc `140V`; both the original wheel-backed run and a post-alignment rerun completed `3/3` prompts successfully |
+| Qwen3.5-0.8B | Fails in current host env | After upgrading `transformers`, the earlier `qwen3_5` architecture-recognition failure disappeared, but engine init now fails in the Qwen processor path with `AttributeError: 'Qwen2VLImageProcessor' object has no attribute 'max_pixels'` |
+| LFM2-1.2B | Fails in current host env | Under the older env it reached request-time execution and died because Triton lacked `next_power_of_2`; after the Triton fix and `transformers` upgrade it now fails earlier during model init with `AttributeError: 'Lfm2Config' object has no attribute 'block_ff_dim'` |
 
 llm-scaler notes:
 
 - **Version pinning**: as of March 11, 2026, Intel's latest documented beta is `intel/llm-scaler-vllm:0.14.0-b8.1`, while upstream `vLLM` on PyPI is already `0.18.0`. Treat `llm-scaler` as an older downstream branch with Intel backports, not as a mirror of current upstream `vLLM`.
 - **Documented model support**: Intel's public `llm-scaler` docs explicitly list broad `Qwen3` and `Qwen3.5` family support, including dense, MoE, VL, Omni, embedding, reranker, and quantized paths.
 - **Code-present but not docs-backed**: the patched downstream code installed locally also contains `lfm2`, `lfm2_moe`, and `lfm2_vl` model registrations, but `LFM2` is not listed in Intel's public `llm-scaler` support tables. Treat that as `present in patched code`, not as Intel-documented support.
-- **Current repo read**: for `llm-scaler`, `Qwen3.5` is docs-backed downstream support; `LFM2` is only code-level evidence here unless we validate it locally.
+- **Qwen3.5 scope caveat**: Intel's March 2026 release notes explicitly call out `Qwen3.5-27B`, `Qwen3.5-35B-A3B`, and `Qwen3.5-122B-A10B`; they do not specifically call out the small `Qwen3.5-0.8B` model we tested here.
+- **Current repo read**: on this Arc `140V` host, `llm-scaler` currently benchmarks only `Llama-3.2-1B-Instruct`; `Qwen3.5-0.8B` and `LFM2-1.2B` still fail for model-specific integration reasons after env alignment.
 
 ### llama.cpp — other backends
 

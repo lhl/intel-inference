@@ -230,6 +230,25 @@ This repo now also tracks Intel's downstream `llm-scaler` stack locally:
   - one important failure mode from the same downstream stack:
     - `--block-size 16` is not viable here once requests actually run
     - the request-time failure was: `XeTLA ChunkPrefill FP8KV: only support block_size >= 64`
+  - to retry the rest of the small-model set, the host env needed another alignment step toward Intel's Dockerfile:
+    - remove the generic `triton` wheel
+    - keep only `triton-xpu 3.6.0`
+    - upgrade `transformers` from GitHub so `qwen3_5` is recognized
+  - that alignment fixed two real env issues:
+    - `triton.backends` now imports cleanly instead of failing with `cannot import name 'intel' from 'triton._C.libtriton'`
+    - `Qwen3.5-0.8B` no longer dies immediately with `ValidationError ... model type qwen3_5`
+  - but it still did not produce a clean all-small-model downstream matrix:
+    - `Llama-3.2-1B-Instruct` still works and a post-alignment rerun completed `3/3` prompts with summary at:
+      - [20260326T054004Z-llmscaler-wheel-xpu-llama32-postalign-shortbench-summary.json](/home/lhl/github/lhl/intel-inference/05-vllm/results/20260326T054004Z-llmscaler-wheel-xpu-llama32-postalign-shortbench-summary.json)
+      - median total latency about `2719.3 ms`
+      - median TTFT about `69.7 ms`
+      - median generation speed about `26.7 tok/s`
+    - `Qwen3.5-0.8B` now fails later during engine initialization in the processor path with `AttributeError: 'Qwen2VLImageProcessor' object has no attribute 'max_pixels'`
+    - `LFM2-1.2B` changed failure mode: before the Triton fix it loaded and then died at request time because `triton.next_power_of_2` was missing; after env alignment it now fails earlier during model initialization with `AttributeError: 'Lfm2Config' object has no attribute 'block_ff_dim'`
+  - current small-model answer for this host-side `llm-scaler` reconstruction:
+    - `Llama-3.2-1B-Instruct`: benchmarkable
+    - `Qwen3.5-0.8B`: not benchmarkable in the current env
+    - `LFM2-1.2B`: not benchmarkable in the current env
 
 Current read:
 
@@ -240,6 +259,7 @@ Current read:
   - `--gpu-memory-utilization 0.20`
   - `--block-size 64`
   - `--enforce-eager`
+- even after aligning Triton and `transformers`, this does not currently extend to the whole small-model set in one working downstream env
 - treat this as `works with workaround`, not as a clean or documented downstream support story for Lunar Lake or Arc `140V`
 
 ## Comparison rules
